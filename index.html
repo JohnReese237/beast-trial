@@ -29,33 +29,10 @@
             color: var(--text-color); display: flex; justify-content: center; align-items: center;
             min-height: 100vh; height: 100vh; overflow: hidden; user-select: none;
             background-color: #1a252f; transition: filter 0.5s;
-            -webkit-font-smoothing: antialiased;
-            text-rendering: optimizeSpeed;
         }
 
-        /* GPU acceleration for animated elements */
-        .fighter, .enemy, .projectile, .battle-effect-item, .side-alert, .boss-glitch-text {
-            will-change: transform;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-        }
-
-        /* Reduce paint area for large containers */
-        #game-screen {
-            contain: layout style;
-            content-visibility: auto;
-        }
-        #menu-screen { content-visibility: auto; }
-        #result-screen { content-visibility: auto; }
-
-        /* Let off-screen elements skip rendering */
-        .modal-overlay:not([style*="display: flex"]) { content-visibility: hidden; }
-
-        /* Optimize background repaints */
-        .battle-center {
-            contain: layout style;
-            transform: translateZ(0);
-        }
+        /* Battle center GPU compositing */
+        .battle-center { transform: translateZ(0); }
 
         /* ====== 关卡原创插画背景 ====== */
         body.bg-level-1 { background: linear-gradient(180deg, rgba(6,28,18,0.18), rgba(6,28,18,0.28)), radial-gradient(ellipse at bottom left, rgba(46,125,50,0.4) 0%, transparent 50%), url('./assets/bg_level_1_forest.png') center / cover no-repeat, linear-gradient(to bottom, #81D4FA, #4CAF50); }
@@ -93,7 +70,7 @@
         input[type="range"] { width: 100%; cursor: pointer; }
 
         /* 中央答题区 */
-        #challenge-box { display: none; position: absolute; top: 18px; left: 12px; right: 12px; bottom: 10px; background: rgba(241, 196, 15, 0.95); color: #2c3e50; padding: 14px 18px 12px; border-radius: 20px; border: 4px solid white; z-index: 9; box-shadow: 0 0 28px rgba(0,0,0,0.45); text-align: center; box-sizing: border-box; overflow-y: auto; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 10px; contain: layout style paint; }
+        #challenge-box { display: none; position: absolute; top: 18px; left: 12px; right: 12px; bottom: 10px; background: rgba(241, 196, 15, 0.95); color: #2c3e50; padding: 14px 18px 12px; border-radius: 20px; border: 4px solid white; z-index: 9; box-shadow: 0 0 28px rgba(0,0,0,0.45); text-align: center; box-sizing: border-box; overflow-y: auto; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 10px; }
         #challenge-box.trap-mode { background: rgba(231, 76, 60, 0.95); color: white; border-color: #c0392b; }
         #challenge-box.task-mode { background: rgba(52, 152, 219, 0.95); color: white; border-color: #2980b9; }
         #challenge-box.class-mode { background: rgba(155, 89, 182, 0.95); color: white; border-color: #8e44ad; }
@@ -132,10 +109,14 @@
         .task-btn:hover:not(:disabled) { background: rgba(255,255,255,0.9); color: #2980b9; transform: scale(1.02); }
         #challenge-box.challenge-fit-compact { padding: 10px 14px 10px; gap: 7px; }
 
-        /* ====== 加载进度条 ====== */
-        #loading-bar-wrap { display: none; width: 80%; max-width: 400px; height: 18px; background: rgba(0,0,0,0.4); border-radius: 9px; overflow: hidden; margin: 12px auto 0; border: 2px solid rgba(255,255,255,0.35); }
-        #loading-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #43e97b, #38f9d7); border-radius: 7px; transition: width 0.3s ease; }
-        #loading-label { display: none; color: #fff; font-size: 0.92rem; margin-top: 6px; text-align: center; }
+        /* ====== 加载页面 ====== */
+        #loading-screen { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; }
+        #loading-screen.done { opacity: 0; pointer-events: none; transition: opacity 0.5s; }
+        #loading-screen h2 { font-size: 2rem; margin-bottom: 30px; color: #f1c40f; text-shadow: 0 2px 10px rgba(241,196,15,0.5); }
+        #loading-bar-wrap { width: 70%; max-width: 480px; height: 22px; background: rgba(255,255,255,0.12); border-radius: 11px; overflow: hidden; border: 2px solid rgba(255,255,255,0.25); }
+        #loading-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #43e97b, #38f9d7); border-radius: 9px; transition: width 0.25s ease; }
+        #loading-label { margin-top: 14px; font-size: 0.95rem; color: rgba(255,255,255,0.7); }
+        #loading-detail { margin-top: 4px; font-size: 0.8rem; color: rgba(255,255,255,0.45); }
         #challenge-box.challenge-fit-compact #challenge-title { font-size: 1.08rem; line-height: 1.2; margin-top: 0; }
         #challenge-box.challenge-fit-compact #challenge-timer { font-size: 0.95rem; padding: 4px 12px; }
         #challenge-box.challenge-fit-compact #challenge-text { font-size: clamp(1.45rem, 3.4vw, 2.35rem); line-height: 1.08; margin: 1px 0; overflow-wrap: anywhere; }
@@ -390,7 +371,14 @@
         <button class="btn-set" onclick="openSettings()">设置 / 测试</button>
     </div>
 
-    <div id="menu-screen" class="screen active">
+    <div id="loading-screen">
+        <h2>神兽试炼</h2>
+        <div id="loading-bar-wrap"><div id="loading-bar-fill"></div></div>
+        <div id="loading-label">正在准备游戏资源...</div>
+        <div id="loading-detail"></div>
+    </div>
+
+    <div id="menu-screen" class="screen">
         <div class="menu-box">
             <h1 style="margin-top: 0; font-size: 2.2rem; text-shadow: 0 2px 5px #000; color: #f1c40f;">🧙‍♂️ 神兽试炼</h1>
             <div style="text-align: left; line-height: 1.7; font-size: 1.05rem; margin-bottom: 25px; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px;">
@@ -400,11 +388,9 @@
                 ✨ <b>课堂能量：</b>保持安静、完成挑战，释放华丽技能清怪。<br>
                 🐉 <b>七关终章：</b>最终与东方神龙一起开启全班许愿池！
             </div>
-            
-            <div id="loading-bar-wrap"><div id="loading-bar-fill"></div></div>
-            <div id="loading-label"></div>
+
             <div style="display: flex; gap: 15px; justify-content: center;">
-                <button class="btn-main" id="btn-enter" style="font-size: 1.5rem; padding: 15px 50px;" onclick="startGame(0)">进入课堂</button>
+                <button class="btn-main" style="font-size: 1.5rem; padding: 15px 50px;" onclick="startGame(0)">进入课堂</button>
                 <button id="toggle-bgm-main" class="btn-music" onclick="toggleBGMState()">🎵 音乐: 开</button>
             </div>
         </div>
@@ -793,90 +779,60 @@
         }
 
         // ====== 图片预加载系统 ======
-        const IMAGE_MANIFEST = {
-            bg: [
-                'bg_level_1_forest.png', 'bg_level_2_thunder_valley.png',
-                'bg_level_3_star_grassland.png', 'bg_level_4_cloud_ruins.png',
-                'bg_level_5_sun_temple.png', 'bg_level_6_dream_sea.png',
-                'bg_level_7_final_barrier.png'
-            ],
-            sprite: [
-                'guardian_lv1.png', 'guardian_lv2.png', 'guardian_lv3.png',
-                'guardian_lv4.png', 'guardian_lv5.png', 'guardian_lv6.png', 'guardian_lv7.png',
-                'beast_fox.png', 'beast_tiger.png', 'beast_unicorn.png', 'beast_drake.png',
-                'beast_lion.png', 'beast_whale.png', 'beast_dragon.png',
-                'mob_noise.png', 'mob_shadow.png', 'mob_bug.png', 'mob_rage.png',
-                'proj_light.png', 'proj_lightning.png', 'proj_rainbow.png', 'proj_wind.png',
-                'proj_wave.png', 'proj_fire.png', 'proj_cosmos.png', 'proj_note.png', 'proj_comet.png',
-                'effect_spark.png', 'effect_burst.png', 'effect_answer.png',
-                'effect_alert.png', 'effect_question.png', 'effect_sound.png',
-                'effect_bomb.png', 'effect_shield.png',
-                'weapon_wood_staff.png', 'weapon_starlight_staff.png',
-                'weapon_element_staff.png', 'weapon_comet_focus.png'
-            ]
-        };
+        const ALL_ASSETS = [
+            'bg_level_1_forest.png', 'bg_level_2_thunder_valley.png',
+            'bg_level_3_star_grassland.png', 'bg_level_4_cloud_ruins.png',
+            'bg_level_5_sun_temple.png', 'bg_level_6_dream_sea.png',
+            'bg_level_7_final_barrier.png',
+            'guardian_lv1.png', 'guardian_lv2.png', 'guardian_lv3.png',
+            'guardian_lv4.png', 'guardian_lv5.png', 'guardian_lv6.png', 'guardian_lv7.png',
+            'beast_fox.png', 'beast_tiger.png', 'beast_unicorn.png', 'beast_drake.png',
+            'beast_lion.png', 'beast_whale.png', 'beast_dragon.png',
+            'mob_noise.png', 'mob_shadow.png', 'mob_bug.png', 'mob_rage.png',
+            'proj_light.png', 'proj_lightning.png', 'proj_rainbow.png', 'proj_wind.png',
+            'proj_wave.png', 'proj_fire.png', 'proj_cosmos.png', 'proj_note.png', 'proj_comet.png',
+            'effect_spark.png', 'effect_burst.png', 'effect_answer.png',
+            'effect_alert.png', 'effect_question.png', 'effect_sound.png',
+            'effect_bomb.png', 'effect_shield.png',
+            'weapon_wood_staff.png', 'weapon_starlight_staff.png',
+            'weapon_element_staff.png', 'weapon_comet_focus.png'
+        ];
 
-        let preloadCache = {};
-        let preloadDone = false;
+        const LOADING_SCREEN = document.getElementById('loading-screen');
+        const LOADING_BAR = document.getElementById('loading-bar-fill');
+        const LOADING_LABEL = document.getElementById('loading-label');
+        const LOADING_DETAIL = document.getElementById('loading-detail');
 
-        async function preloadImages(priorityCategory) {
-            const files = priorityCategory ? IMAGE_MANIFEST[priorityCategory] || [] : [];
-            if (!files.length) return;
+        let assetsLoaded = 0;
+        const ASSETS_TOTAL = ALL_ASSETS.length;
 
-            const total = files.length;
-            let loaded = 0;
-            const bar = document.getElementById('loading-bar-fill');
-            const wrap = document.getElementById('loading-bar-wrap');
-            const label = document.getElementById('loading-label');
-            const btn = document.getElementById('btn-enter');
-
-            if (wrap) wrap.style.display = 'block';
-            if (label) label.style.display = 'block';
-            if (btn) btn.disabled = true;
-
-            function updateProgress() {
-                const pct = Math.round((loaded / total) * 100);
-                if (bar) bar.style.width = pct + '%';
-                if (label) label.textContent = priorityCategory === 'bg'
-                    ? `正在加载场景... ${loaded}/${total}`
-                    : `正在加载素材... ${loaded}/${total}`;
+        function updateLoadProgress(fileName) {
+            assetsLoaded++;
+            const pct = Math.round((assetsLoaded / ASSETS_TOTAL) * 100);
+            LOADING_BAR.style.width = pct + '%';
+            LOADING_LABEL.textContent = `正在加载游戏资源... ${assetsLoaded}/${ASSETS_TOTAL}`;
+            LOADING_DETAIL.textContent = fileName;
+            if (assetsLoaded >= ASSETS_TOTAL) {
+                setTimeout(finishLoading, 200);
             }
-
-            const loaders = files.map(file => {
-                const url = `${ASSET_BASE}/${file}`;
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = img.onerror = () => {
-                        preloadCache[file] = img;
-                        loaded++;
-                        updateProgress();
-                        resolve();
-                    };
-                    img.src = url;
-                });
-            });
-
-            await Promise.all(loaders);
         }
 
-        async function preloadAllAssets() {
-            if (preloadDone) return;
-            await preloadImages('bg');
-            await preloadImages('sprite');
-            preloadDone = true;
-            const wrap = document.getElementById('loading-bar-wrap');
-            const label = document.getElementById('loading-label');
-            const btn = document.getElementById('btn-enter');
-            if (wrap) wrap.style.display = 'none';
-            if (label) { label.textContent = '加载完成，点击进入'; }
+        function finishLoading() {
+            LOADING_LABEL.textContent = '加载完成';
+            LOADING_DETAIL.textContent = '';
+            LOADING_SCREEN.classList.add('done');
+            // 显示菜单
+            document.getElementById('menu-screen').classList.add('active');
+            setTimeout(() => { LOADING_SCREEN.remove(); }, 600);
         }
 
-        // 启动预加载，不阻塞菜单显示
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => requestIdleCallback ? requestIdleCallback(preloadAllAssets) : preloadAllAssets());
-        } else {
-            requestIdleCallback ? requestIdleCallback(preloadAllAssets) : preloadAllAssets();
-        }
+        // 立即启动并行预加载，不等待 DOMContentLoaded
+        ALL_ASSETS.forEach(file => {
+            const img = new Image();
+            img.onload = () => updateLoadProgress(file);
+            img.onerror = () => updateLoadProgress(file);
+            img.src = `${ASSET_BASE}/${file}`;
+        });
 
         const ICON_LIBRARY = {
             'guardian-lv1': makeAssetIcon('guardian_lv1.png', '守', 'Lv.1 守护者'),
