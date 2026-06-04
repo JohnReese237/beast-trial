@@ -1,0 +1,2576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神兽试炼 - 合作守线版</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --danger-color: #f44336;
+            --panel-bg: rgba(44, 62, 80, 0.9);
+            --text-color: #ecf0f1;
+            --accent-color: #f1c40f;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { width: 100%; min-width: 0; }
+
+        body {
+            margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif;
+            color: var(--text-color); display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; height: 100vh; overflow: hidden; user-select: none;
+            background-color: #1a252f; transition: background 1.5s ease-in-out, filter 0.5s;
+        }
+
+        /* ====== 创意自然生态背景 ====== */
+        body.bg-level-1 { background: radial-gradient(ellipse at bottom left, #2E7D32 0%, transparent 50%), radial-gradient(ellipse at bottom right, #1B5E20 0%, transparent 60%), repeating-linear-gradient(45deg, rgba(0,0,0,0.05) 0, rgba(0,0,0,0.05) 10px, transparent 10px, transparent 20px), linear-gradient(to bottom, #81D4FA, #4CAF50); } 
+        body.bg-level-2 { background: radial-gradient(circle at 20% 30%, rgba(248,187,208,0.8) 0%, transparent 15%), radial-gradient(circle at 80% 60%, rgba(225,190,231,0.8) 0%, transparent 20%), radial-gradient(circle at 50% 90%, rgba(255,245,157,0.8) 0%, transparent 30%), linear-gradient(to bottom, #B3E5FC, #C8E6C9); } 
+        body.bg-level-3 { background: repeating-linear-gradient(75deg, rgba(27,94,32,0.6) 0, rgba(27,94,32,0.6) 20px, transparent 20px, transparent 60px), repeating-linear-gradient(-35deg, rgba(0,0,0,0.2) 0, rgba(0,0,0,0.2) 15px, transparent 15px, transparent 40px), linear-gradient(to bottom, #004D40, #33691E); } 
+        body.bg-level-4 { background: radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0 2px, transparent 3px) 0 0 / 46px 46px, radial-gradient(circle at 80% 18%, rgba(255,255,255,0.35) 0%, transparent 22%), radial-gradient(circle at 30% 90%, rgba(248,187,208,0.45) 0%, transparent 35%), linear-gradient(135deg, rgba(179,157,219,0.85) 0%, rgba(244,143,177,0.7) 45%, rgba(129,212,250,0.65) 100%), linear-gradient(to bottom, #5E35B1, #8E24AA); } 
+        body.bg-level-5 { background: radial-gradient(circle at 50% 12%, rgba(255,236,179,0.85) 0%, transparent 22%), radial-gradient(ellipse at 78% 28%, rgba(255,215,0,0.45) 0%, transparent 34%), repeating-linear-gradient(110deg, rgba(255,255,255,0.16) 0 8px, transparent 8px 34px), linear-gradient(135deg, #7F0000 0%, #B71C1C 42%, #F9A825 100%); }
+        body.bg-level-6 { background: radial-gradient(circle at 50% 16%, rgba(179,229,252,0.85) 0%, transparent 24%), radial-gradient(ellipse at 50% 70%, rgba(63,81,181,0.55) 0%, transparent 55%), repeating-linear-gradient(120deg, rgba(255,255,255,0.12) 0 4px, transparent 4px 32px), linear-gradient(to bottom, #0B1B4D, #311B92 58%, #000814); } /* 星海背景 */
+        body.bg-level-7 { background: repeating-conic-gradient(from 0deg, rgba(255,255,255,0.1) 0deg 10deg, transparent 10deg 20deg), radial-gradient(circle at 50% 50%, #FFCC80 0%, transparent 60%), linear-gradient(to bottom, #2C3E50, #000000); } /* 神龙终章背景 */
+        body.sealed-bg { background: radial-gradient(circle, #00E5FF 0%, #001B48 100%) !important; filter: hue-rotate(10deg) saturate(1.5); }
+
+        .screen { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 800px; max-height: 100vh; padding: 20px; text-align: center; z-index: 5; overflow: hidden; }
+        .screen.active { display: flex; }
+        #game-screen { max-width: none; width: calc(100% - 8px); padding-left: 4px; padding-right: 4px; box-sizing: border-box; justify-content: flex-start; position: relative; }
+
+        .top-info { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: min(1180px, calc(100vw - 16px)); display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; z-index: 10; }
+        .level-badge { background: var(--accent-color); color: #2c3e50; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 1.2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .hero-badge { background: rgba(0,0,0,0.55); color: #fff; padding: 8px 14px; border-radius: 20px; font-weight: bold; border: 2px solid rgba(255,255,255,0.45); box-shadow: 0 4px 8px rgba(0,0,0,0.25); }
+
+        button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 1rem; }
+        .btn-main { background: var(--primary-color); color: white; }
+        .btn-pause { background: #3498db; color: white; }
+        .btn-restart { background: #e67e22; color: white; }
+        .btn-set { background: #95a5a6; color: white; }
+        .btn-music { background: #9b59b6; color: white; font-size: 1.1rem; border: 2px solid #8e44ad; }
+        button:hover { transform: scale(1.05); filter: brightness(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        button:disabled { background: #7f8c8d; cursor: not-allowed; transform: none; box-shadow: none; filter: none; }
+
+        .menu-box { background: rgba(0,0,0,0.6); padding: 40px; border-radius: 15px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: #2c3e50; padding: 30px; border-radius: 15px; width: 450px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .setting-item { margin: 15px 0; text-align: left; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;}
+        .setting-item label { display: block; margin-bottom: 5px; font-size: 0.95rem; font-weight: bold; color: var(--accent-color); }
+        input[type="range"] { width: 100%; cursor: pointer; }
+
+        /* 中央答题区 */
+        #challenge-box { display: none; position: absolute; top: 18px; left: 12px; right: 12px; bottom: 10px; background: rgba(241, 196, 15, 0.95); color: #2c3e50; padding: 14px 18px 12px; border-radius: 20px; border: 4px solid white; z-index: 9; box-shadow: 0 0 28px rgba(0,0,0,0.45); text-align: center; box-sizing: border-box; overflow-y: auto; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 10px; }
+        #challenge-box.trap-mode { background: rgba(231, 76, 60, 0.95); color: white; border-color: #c0392b; }
+        #challenge-box.task-mode { background: rgba(52, 152, 219, 0.95); color: white; border-color: #2980b9; }
+        #challenge-box.class-mode { background: rgba(155, 89, 182, 0.95); color: white; border-color: #8e44ad; }
+        
+        #challenge-title { font-weight: bold; font-size: 1.28rem; margin: 2px 0 0; text-shadow: 0 1px 2px rgba(0,0,0,0.2); line-height: 1.35; }
+        #challenge-timer { font-size: 1.05rem; background: rgba(0,0,0,0.4); color: white; padding: 5px 15px; border-radius: 20px; display: inline-block; margin: 0 auto; align-self: center; }
+        #challenge-text { font-size: clamp(2rem, 4.3vw, 3.05rem); font-weight: bold; margin: 4px 0 2px; line-height: 1.18; }
+        .challenge-chip-row { position: absolute; top: 48px; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; pointer-events: none; z-index: 8; }
+        .challenge-chip { min-width: 180px; max-width: 30%; padding: 10px 18px; border-radius: 16px; background: rgba(12, 20, 34, 0.78); border: 1px solid rgba(255,255,255,0.28); color: #fff; font-weight: bold; text-align: center; text-shadow: 0 1px 3px #000; box-shadow: 0 8px 20px rgba(0,0,0,0.25); backdrop-filter: blur(4px); }
+        .challenge-chip.left { margin-left: 20px; }
+        .challenge-chip.right { margin-right: 20px; }
+        .fighter-skill-label { min-width: 150px; max-width: 220px; padding: 6px 10px; border-radius: 14px; background: rgba(12, 20, 34, 0.72); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 0.92rem; font-weight: bold; text-align: center; text-shadow: 0 1px 3px #000; box-shadow: 0 6px 14px rgba(0,0,0,0.18); backdrop-filter: blur(4px); line-height: 1.3; }
+        .ui-label-with-icon { display: inline-flex; align-items: center; gap: 8px; }
+        .ui-icon-pack { display: inline-flex; align-items: center; justify-content: center; gap: 0.12em; }
+        .ui-icon-shell { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; vertical-align: middle; flex: 0 0 auto; position: relative; }
+        .ui-icon-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .ui-icon-fallback { display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 0.66em; font-weight: 900; line-height: 1; color: currentColor; }
+        .ui-icon-shell.icon-fallback .ui-icon-fallback { display: inline-flex; }
+        .hero-badge .ui-icon-shell, .fighter-label .ui-icon-shell { width: 1.2em; height: 1.2em; }
+        .fighter .ui-icon-shell { width: 1.55em; height: 1.55em; }
+        .enemy .ui-icon-shell { width: 1.2em; height: 1.2em; }
+        .projectile .ui-icon-shell, .battle-effect-item .ui-icon-shell, .battle-effect .ui-icon-shell, .bomb-icon .ui-icon-shell { width: 1em; height: 1em; }
+        .battle-effect .ui-icon-pack { gap: 0.18em; }
+
+        .side-alert { position: fixed; top: 50%; font-size: 5rem; font-weight: 900; color: #ffeb3b; text-shadow: 0 0 15px rgba(255, 0, 0, 0.9), 4px 4px 0px #d35400, -2px -2px 0 #fff; z-index: 45; display: none; width: 1.2em; word-wrap: break-word; text-align: center; line-height: 1.1; animation: side-shake 0.3s infinite alternate; pointer-events: none; }
+        .side-alert.left { left: 3%; transform: translateY(-50%); }
+        .side-alert.right { right: 3%; transform: translateY(-50%); }
+        @keyframes side-shake { 0% { transform: translateY(-50%) rotate(-5deg) scale(1); } 100% { transform: translateY(-50%) rotate(5deg) scale(1.15); } }
+
+        .reading-bar-wrap { height: 22px; background: rgba(0,0,0,0.2); border-radius: 11px; overflow: hidden; position: relative; border: 2px solid #fff; margin-top: 2px; display: none; width: 100%;}
+        .reading-bar-fill { height: 100%; width: 0%; background: #2ecc71; transition: width 0.1s; }
+        .reading-label { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 12px; font-weight: bold; color: #2c3e50; z-index: 2;}
+
+        .task-options { display: none; flex-direction: column; gap: 8px; margin-top: 0; }
+        .task-btn { background: rgba(0,0,0,0.2); border: 2px solid white; color: white; padding: 10px 12px; font-size: 1.08rem; line-height: 1.2; min-height: 54px; border-radius: 10px; cursor: pointer; transition: 0.2s; font-weight: bold; }
+        .task-btn:hover:not(:disabled) { background: rgba(255,255,255,0.9); color: #2980b9; transform: scale(1.02); }
+        #challenge-box.challenge-fit-compact { padding: 10px 14px 10px; gap: 7px; }
+        #challenge-box.challenge-fit-compact #challenge-title { font-size: 1.08rem; line-height: 1.2; margin-top: 0; }
+        #challenge-box.challenge-fit-compact #challenge-timer { font-size: 0.95rem; padding: 4px 12px; }
+        #challenge-box.challenge-fit-compact #challenge-text { font-size: clamp(1.45rem, 3.4vw, 2.35rem); line-height: 1.08; margin: 1px 0; overflow-wrap: anywhere; }
+        #challenge-box.challenge-fit-compact .task-options { gap: 6px; }
+        #challenge-box.challenge-fit-compact .task-btn { min-height: 42px; padding: 7px 10px; font-size: 0.96rem; line-height: 1.12; overflow-wrap: anywhere; }
+        #challenge-box.challenge-fit-compact .reading-bar-wrap { height: 18px; margin-top: 0; }
+        #challenge-box.challenge-fit-compact .bomb-icon { font-size: 2.6rem; margin: -8px 0; }
+        #challenge-box.challenge-fit-compact #challenge-test-pass { margin-top: 6px !important; padding: 7px 12px; font-size: 0.92rem; }
+        #challenge-box.challenge-fit-tight { padding: 7px 10px 8px; gap: 4px; }
+        #challenge-box.challenge-fit-tight #challenge-title { font-size: 0.92rem; line-height: 1.12; margin-top: 0; }
+        #challenge-box.challenge-fit-tight #challenge-timer { font-size: 0.82rem; padding: 3px 10px; }
+        #challenge-box.challenge-fit-tight #challenge-text { font-size: clamp(1.05rem, 2.7vw, 1.65rem); line-height: 1.03; margin: 0; overflow-wrap: anywhere; }
+        #challenge-box.challenge-fit-tight .task-options { gap: 4px; }
+        #challenge-box.challenge-fit-tight .task-btn { min-height: 31px; padding: 4px 7px; font-size: 0.8rem; line-height: 1.06; overflow-wrap: anywhere; }
+        #challenge-box.challenge-fit-tight .reading-bar-wrap { height: 15px; margin-top: 0; }
+        #challenge-box.challenge-fit-tight .reading-label { top: 1px; font-size: 10px; }
+        #challenge-box.challenge-fit-tight .bomb-icon { font-size: 2rem; margin: -8px 0; }
+        #challenge-box.challenge-fit-tight #challenge-test-pass { margin-top: 4px !important; padding: 5px 10px; font-size: 0.8rem; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); filter: drop-shadow(0 0 15px red); } 100% { transform: scale(1); } }
+        .bomb-icon { display: none; font-size: 3.5rem; animation: pulse 0.6s infinite; margin: -10px 0; }
+
+        .battle-stage { width: 100%; height: calc(100vh - 156px); min-height: 500px; margin: 0 0 4px; position: relative; }
+        .lane { min-height: 390px; border-radius: 24px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.18); display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; overflow: hidden; box-shadow: inset 0 0 18px rgba(0,0,0,0.25); position: absolute; top: 116px; bottom: 0; padding: 16px 12px 12px; box-sizing: border-box; width: calc(50% - 285px); }
+        .left-lane { left: 0; }
+        .right-lane { right: 0; }
+        .lane-title { font-size: 0.95rem; font-weight: bold; color: #f1c40f; margin-bottom: 10px; text-shadow: 1px 1px 3px #000; }
+        .monster-stream { flex: 1; position: relative; width: 100%; border-radius: 14px; background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.12)); overflow: hidden; }
+        .battle-center { min-height: 0; width: 520px; border-radius: 28px; background: rgba(12,20,34,0.16); border: 2px dashed rgba(255,255,255,0.2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; position: absolute; top: 116px; bottom: 0; left: 50%; transform: translateX(-50%); box-shadow: inset 0 0 20px rgba(0,0,0,0.12); overflow: hidden; z-index: 5; }
+        .battle-pair { display: none; }
+        .answer-zone-hint { display: none; }
+        .fighter-zone { position: absolute; top: 58%; width: 170px; display: flex; flex-direction: column; gap: 8px; z-index: 7; pointer-events: none; }
+        .left-fighter-zone { transform: translateY(-50%); align-items: flex-end; text-align: right; }
+        .right-fighter-zone { transform: translateY(-50%); align-items: flex-start; text-align: left; }
+        .fighter { font-size: clamp(3.8rem, 10vw, 6rem); filter: drop-shadow(0 12px 12px rgba(0,0,0,0.6)); transition: transform 0.25s, filter 0.25s; position: relative; z-index: 3; }
+        .fighter-label { font-size: 0.95rem; font-weight: bold; color: white; text-shadow: 1px 1px 3px #000; }
+        .vs-label { font-size: 1rem; color: #f1c40f; font-weight: 900; text-shadow: 1px 1px 4px #000; }
+        .battle-effect { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; font-size: clamp(2rem, 8vw, 5rem); pointer-events: none; animation: skill-flash 0.7s ease-out; z-index: 5; }
+        .battle-stage.noisy .fighter { animation: shake 0.2s infinite; filter: drop-shadow(0 0 14px #ff4757); }
+        .battle-stage.sealed .battle-center { box-shadow: 0 0 35px #00E5FF, inset 0 0 25px rgba(0,229,255,0.35); }
+        .fighter.idle-hero { animation: idleFloat 2.6s infinite ease-in-out; }
+        .fighter.idle-beast { animation: beastFloat 2.2s infinite ease-in-out; }
+        .fighter.attacking.hero { animation: heroAttackRight 0.48s cubic-bezier(0.22, 1, 0.36, 1); }
+        .fighter.attacking.beast { animation: beastAttackLeft 0.48s cubic-bezier(0.22, 1, 0.36, 1); }
+        .fighter.casting { animation: skillPulse 0.85s cubic-bezier(0.22, 1, 0.36, 1) 1; }
+        .fighter.danger { animation: dangerShake 0.3s infinite; }
+        .fighter.sealed-boost { filter: drop-shadow(0 0 16px #8be9ff); }
+        @keyframes idleFloat { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(0, -7px, 0) scale(1.04); } }
+        @keyframes beastFloat { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(0, -9px, 0) scale(1.06); } }
+        @keyframes heroAttackRight { 0% { transform: translate3d(0, 0, 0) scale(1); } 35% { transform: translate3d(18px, -2px, 0) scale(1.08); } 70% { transform: translate3d(6px, 0, 0) scale(1.03); } 100% { transform: translate3d(0, 0, 0) scale(1); } }
+        @keyframes beastAttackLeft { 0% { transform: translate3d(0, 0, 0) scale(1); } 35% { transform: translate3d(-18px, -2px, 0) scale(1.08); } 70% { transform: translate3d(-6px, 0, 0) scale(1.03); } 100% { transform: translate3d(0, 0, 0) scale(1); } }
+        @keyframes skillPulse { 0% { transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); } 40% { transform: translate3d(0, -4px, 0) scale(1.12); filter: brightness(1.35); } 100% { transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); } }
+        @keyframes dangerShake { 0% { transform: translate(2px, 1px) rotate(1deg); } 50% { transform: translate(-2px, -1px) rotate(-1deg); } 100% { transform: translate(2px, 1px) rotate(1deg); } }
+        @keyframes shake { 0% { transform: translate(4px, 4px) rotate(2deg); } 50% { transform: translate(-4px, -4px) rotate(-2deg); } 100% { transform: translate(4px, 4px) rotate(2deg); } }
+        @keyframes skill-flash { 0% { transform: scale(0.65); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
+        @keyframes shieldGlow { 0%, 100% { opacity: 0.38; box-shadow: 0 0 25px rgba(120, 210, 255, 0.28); } 50% { opacity: 0.62; box-shadow: 0 0 40px rgba(160, 120, 255, 0.4); } }
+        .battlefield-layer { position: absolute; inset: 0; pointer-events: none; }
+        .enemy { position: absolute; font-size: clamp(1.35rem, 3vw, 2.1rem); transform: translate(-50%, -50%); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.55)); transition: opacity 0.15s linear; will-change: transform; }
+        .enemy.sealed { opacity: 0.72; text-shadow: 0 0 10px #7dd3fc; }
+        .enemy.hit { animation: enemyHit 0.25s ease-out; }
+        @keyframes enemyHit { 0% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.18); } 100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.3; } }
+        .projectile { position: absolute; font-size: clamp(1.1rem, 2.3vw, 1.9rem); transform: translate3d(-50%, -50%, 0); filter: drop-shadow(0 0 8px rgba(255,255,255,0.45)); z-index: 4; will-change: transform; }
+        .projectile.hero { color: #ffe082; }
+        .projectile.beast { color: #80deea; }
+        .battle-effect-item { position: absolute; transform: translate(-50%, -50%); font-size: clamp(1.2rem, 3vw, 2rem); font-weight: bold; color: white; text-shadow: 0 0 10px rgba(255,255,255,0.75); z-index: 4; animation: floatFade 0.34s ease-out forwards; display: inline-flex; align-items: center; gap: 6px; }
+        @keyframes floatFade { 0% { opacity: 0; transform: translate(-50%, -40%) scale(0.8); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -95%) scale(1.12); } }
+        .battle-banner { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); min-width: 220px; max-width: calc(100% - 20px); padding: 8px 16px; border-radius: 999px; background: rgba(8, 12, 33, 0.7); border: 1px solid rgba(255,255,255,0.22); color: white; font-weight: bold; text-align: center; text-shadow: 0 1px 3px #000; z-index: 6; backdrop-filter: blur(4px); }
+        .battle-banner.warning { background: rgba(122, 24, 24, 0.78); border-color: rgba(255, 112, 112, 0.4); }
+        .battle-banner.seal { background: rgba(36, 73, 120, 0.76); border-color: rgba(125, 211, 252, 0.5); }
+        .top-meter { position: absolute; top: 16px; width: clamp(220px, 24vw, 340px); z-index: 7; pointer-events: none; }
+        .top-meter-left { left: 28px; }
+        .top-meter-right { right: 28px; }
+        .top-meter-label { color: #050505; font-size: clamp(1.25rem, 2vw, 1.7rem); line-height: 1.1; font-weight: 900; text-shadow: 0 1px 0 rgba(255,255,255,0.35); margin-bottom: 8px; }
+        .top-meter-bar { height: 28px; background: rgba(9, 14, 22, 0.82); border-radius: 16px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 6px 14px rgba(0,0,0,0.22); }
+        .top-meter-bar .label { display: none; }
+        .top-meter-bar .danger-grid { right: 8px; top: 5px; }
+        .top-meter-bar .danger-block { width: 16px; height: 16px; }
+        @media (max-width: 1180px) {
+            .battle-center { width: 470px; min-height: 396px; }
+            .lane { width: calc(50% - 255px); min-height: 372px; }
+            .challenge-chip { min-width: 150px; max-width: 32%; }
+        }
+        @media (min-width: 701px) and (max-height: 720px) {
+            .top-info { top: 8px; gap: 8px; }
+            .level-badge, .hero-badge { font-size: 0.95rem; padding: 6px 10px; }
+            #game-nav button { padding: 7px 10px; font-size: 0.9rem; }
+            .time-display { font-size: 2.15rem; margin-top: 62px; margin-bottom: 0; }
+            .seal-text { font-size: 1.05rem; margin-bottom: 4px; }
+            .battle-stage { height: calc(100vh - 125px); min-height: 360px; margin: 0 0 4px; }
+            .lane { top: 88px; min-height: 0; padding: 10px 8px 8px; width: calc(50% - 238px); border-radius: 18px; }
+            .battle-center { top: 88px; bottom: 0; width: 450px; min-height: 0; border-radius: 20px; gap: 8px; }
+            .top-meter { top: 8px; width: clamp(178px, 22vw, 280px); }
+            .top-meter-left { left: 16px; }
+            .top-meter-right { right: 16px; }
+            .top-meter-label { font-size: 1.08rem; margin-bottom: 5px; }
+            .top-meter-bar { height: 22px; }
+            .fighter-zone { top: 58%; width: 150px; gap: 5px; }
+            .fighter { font-size: clamp(3.2rem, 7.5vw, 4.7rem); }
+            .fighter-label, .vs-label { font-size: 0.82rem; }
+            .fighter-skill-label { min-width: 120px; max-width: 170px; padding: 4px 7px; font-size: 0.76rem; line-height: 1.15; }
+            .challenge-chip-row { top: 36px; }
+            .challenge-chip { min-width: 130px; padding: 7px 10px; font-size: 0.82rem; }
+            .battle-banner { top: 4px; padding: 6px 12px; font-size: 0.82rem; }
+            #challenge-box { top: 10px; left: 8px; right: 8px; bottom: 8px; padding: 10px 12px; gap: 6px; }
+            #challenge-title { font-size: 1.05rem; line-height: 1.2; }
+            #challenge-text { font-size: clamp(1.35rem, 3.2vw, 2rem); line-height: 1.08; }
+            .task-btn { min-height: 38px; padding: 6px 9px; font-size: 0.9rem; }
+            .status-bars { max-width: 560px; padding: 8px 10px; margin-top: 2px; }
+            .bar-wrap { height: 20px; margin: 7px 0; }
+            .label { top: 3px; font-size: 11px; }
+            .danger-block { width: 12px; height: 12px; }
+        }
+
+        @media (max-width: 700px) {
+            .battle-stage { min-height: auto; display: flex; flex-direction: column; gap: 8px; }
+            .lane { min-height: 160px; position: static; width: auto; }
+            .battle-center { min-height: 220px; position: relative; top: auto; left: auto; transform: none; width: auto; }
+            .lane-title { display: none; }
+            .battle-banner { top: 6px; font-size: 0.85rem; padding: 6px 12px; }
+            .fighter-zone { position: static; width: auto; flex-direction: row; justify-content: center; margin-top: 8px; }
+            .left-fighter-zone, .right-fighter-zone { left: auto; right: auto; transform: none; }
+            #challenge-box { top: 10px; left: 8px; right: 8px; bottom: 8px; padding: 10px 12px 10px; }
+            #challenge-text { font-size: 1.5rem; margin: 10px 0; }
+            .task-btn { padding: 8px 10px; font-size: 1rem; }
+            .challenge-chip-row { position: static; order: -1; display: flex; gap: 8px; margin-bottom: 6px; }
+            .challenge-chip { min-width: 0; max-width: none; flex: 1; margin: 0; padding: 8px 10px; font-size: 0.9rem; }
+            .fighter-skill-label { font-size: 0.82rem; min-width: 120px; max-width: 180px; padding: 5px 8px; }
+        }
+
+        .seal-overlay { position: absolute; top: -8px; left: -8px; right: -8px; bottom: -8px; background: linear-gradient(135deg, rgba(96, 165, 250, 0.26), rgba(168, 85, 247, 0.24)); border-radius: 18px; box-shadow: inset 0 0 28px rgba(165, 243, 252, 0.32), 0 0 28px rgba(96, 165, 250, 0.24); display: none; z-index: 2; animation: shieldGlow 1.8s infinite ease-in-out; pointer-events: none; }
+        
+        .status-bars { width: 100%; max-width: 600px; margin-top: 4px; background: rgba(0,0,0,0.5); padding: 12px; border-radius: 15px; backdrop-filter: blur(5px); box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); }
+        .bar-wrap { height: 26px; background: rgba(0,0,0,0.6); border-radius: 13px; margin: 12px 0; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .bar-fill { height: 100%; width: 0%; transition: width 0.1s linear; }
+        .label { position: absolute; left: 15px; top: 5px; font-size: 13px; font-weight: bold; z-index: 5; text-shadow: 1px 1px 3px #000; }
+        .threshold-line { position: absolute; top: 0; bottom: 0; width: 4px; background: #ff4757; z-index: 6; box-shadow: 0 0 10px #ff4757; transition: left 0.2s; }
+
+        .danger-grid { display: flex; gap: 4px; position: absolute; right: 8px; top: 4px; z-index: 5; }
+        .danger-block { width: 16px; height: 16px; background: rgba(255,255,255,0.3); border-radius: 4px; border: 1px solid #000; transition: 0.3s; }
+        .danger-block.active { background: #ff4757; box-shadow: 0 0 8px #ff4757; }
+
+        #vol-fill { background: #1e90ff; } #noise-acc-fill { background: #f39c12; } #evolve-fill { background: #2ed573; }
+        .time-display { font-size: 2.85rem; font-weight: bold; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.5); margin-bottom: 0; letter-spacing: 2px; margin-top: 84px;}
+        .seal-text { color: #00E5FF; font-size: 1.5rem; font-weight: bold; display: none; text-shadow: 0 0 10px #00E5FF; margin-bottom: 10px; }
+        #challenge-group-callout { display: none; position: absolute; top: 148px; left: 50%; transform: translateX(-50%); z-index: 18; align-items: center; justify-content: center; width: fit-content; max-width: min(880px, calc(100vw - 24px)); padding: 12px 26px; border-radius: 999px; background: rgba(12, 20, 34, 0.86); border: 2px solid rgba(255,255,255,0.42); color: #fff4b4; font-size: clamp(1.28rem, 2.4vw, 1.65rem); font-weight: 900; line-height: 1.18; letter-spacing: 0.04em; text-align: center; text-shadow: 0 2px 5px rgba(0,0,0,0.42); box-shadow: 0 12px 26px rgba(0,0,0,0.24); pointer-events: none; }
+        .header-box { display: flex; justify-content: center; align-items: center; gap: 20px; }
+        .header-box, .battle-banner, .challenge-chip-row, .fighter-skill-label, .status-bars, .removed-status-bars { display: none !important; }
+        @media (min-width: 701px) and (max-height: 720px) {
+            .time-display { font-size: 2.15rem; margin-top: 62px; margin-bottom: 0; }
+        }
+        @media (max-width: 700px) {
+            .time-display { font-size: 2.15rem; margin-top: 76px; }
+            #challenge-group-callout { top: 126px; max-width: calc(100vw - 18px); padding: 10px 14px; font-size: clamp(1.02rem, 3.8vw, 1.18rem); }
+            .top-meter { position: relative; top: auto; left: auto; right: auto; width: min(320px, 92vw); margin: 0 auto 6px; }
+        }
+
+        /* ======== Boss阶段专属样式 ======== */
+        #boss-container { display: none; position: absolute; top: 10px; left: 8px; right: 8px; bottom: 8px; z-index: 12; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 8px; pointer-events: none; }
+        .boss-glitch-text { font-size: clamp(1.25rem, 2.8vw, 1.85rem); font-weight: 900; color: #ff4757; text-shadow: 0 0 14px #ff4757, 2px 2px 0px rgba(0,0,0,0.8); animation: pulse 0.8s infinite alternate; margin: 0; text-align: center; }
+        .boss-timer-text { font-size: 1rem; color: #f1c40f; font-weight: bold; background: rgba(0,0,0,0.5); padding: 5px 16px; border-radius: 20px; display: inline-flex; justify-content: center; align-self: center; margin: 0 auto; }
+        
+        .boss-type1-box { background: rgba(231, 76, 60, 0.9); padding: 16px; border-radius: 20px; border: 3px solid #fff; box-shadow: 0 0 30px rgba(231, 76, 60, 0.55); text-align: center; width: 100%; box-sizing: border-box; pointer-events: auto; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; flex: 1 1 auto; min-height: 0; }
+        #boss-t1-word { font-size: 3.5rem; font-weight: bold; color: white; margin: 20px 0; text-shadow: 2px 2px 5px #000; }
+        
+        .boss-split-container { display: flex; gap: 30px; justify-content: center; align-items: stretch; }
+        .boss-split-box { background: rgba(44, 62, 80, 0.95); border: 5px solid #3498db; padding: 25px; border-radius: 20px; width: 350px; text-align: center; box-shadow: 0 0 30px rgba(52, 152, 219, 0.6); display: flex; flex-direction: column;}
+        .boss-split-group { font-size: 2rem; color: #fff; background: #e67e22; padding: 8px; border-radius: 10px; margin-top: 0; border: 2px solid #fff; }
+        .boss-split-q { font-size: 1.5rem; font-weight: bold; margin: 15px 0; flex-grow: 1; display: flex; align-items: center; justify-content: center; }
+        .boss-split-status { font-size: 1.5rem; font-weight: bold; margin-top: 10px; height: 30px;}
+
+        /* ======== 许愿系统 ======== */
+        #wish-box { display: none; margin-top: 25px; flex-direction: column; align-items: center; }
+        #wish-input { font-size: 1.6rem; padding: 15px; width: 100%; max-width: 400px; border-radius: 12px; border: 3px solid #f1c40f; background: rgba(255,255,255,0.9); color: #2c3e50; text-align: center; margin-bottom: 15px; }
+        .wish-granted-text { font-size: 2.2rem; color: #f1c40f; text-shadow: 0 0 15px #f1c40f; display: none; font-weight: bold; animation: pulse 1s infinite alternate; }
+
+
+        /* Boss 答题面板按题目长度自动收缩，优先让 3 个选项完整露出。 */
+        #boss-container { box-sizing: border-box; }
+        .boss-type1-box { max-height: min(58vh, calc(100vh - 270px)); overflow-y: auto; box-sizing: border-box; padding: 18px; }
+        #boss-relay-title { margin-bottom: 8px; line-height: 1.15; }
+        #boss-relay-subtitle { display: none; line-height: 1.25; }
+        #boss-relay-progress { line-height: 1.2; }
+        #boss-relay-group { line-height: 1.2; margin-top: 8px; color: #fff4b4; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.35); }
+        #boss-relay-kind { line-height: 1.2; }
+        #boss-t1-word { font-size: clamp(1.65rem, 4.4vw, 2.7rem); margin: 12px 0; line-height: 1.12; overflow-wrap: anywhere; }
+        #boss-reading-wrap { flex: 0 0 auto; }
+        #boss-relay-options { gap: 8px; }
+        #boss-relay-options .task-btn { padding: 9px 12px; font-size: 1rem; line-height: 1.18; min-height: 48px; overflow-wrap: anywhere; }
+        #boss-relay-feedback { flex: 0 0 auto; line-height: 1.2; }
+        .boss-type1-box.boss-fit-compact { padding: 13px 16px; }
+        .boss-type1-box.boss-fit-compact #boss-relay-title { font-size: 1.25rem !important; margin-bottom: 4px; }
+        .boss-type1-box.boss-fit-compact #boss-relay-progress { font-size: 1.25rem !important; }
+        .boss-type1-box.boss-fit-compact #boss-timer { font-size: 0.92rem !important; padding: 4px 12px; }
+        .boss-type1-box.boss-fit-compact #boss-relay-group { font-size: 1.6rem !important; margin-top: 7px !important; }
+        .boss-type1-box.boss-fit-compact #boss-relay-kind { font-size: 1.05rem !important; margin-top: 4px !important; }
+        .boss-type1-box.boss-fit-compact #boss-t1-word { font-size: clamp(1.45rem, 3.7vw, 2.25rem); margin: 7px 0; }
+        .boss-type1-box.boss-fit-compact #boss-relay-options { gap: 6px; }
+        .boss-type1-box.boss-fit-compact #boss-relay-options .task-btn { min-height: 40px; padding: 7px 10px; font-size: 0.95rem; }
+        .boss-type1-box.boss-fit-compact #boss-relay-feedback { min-height: 24px !important; margin-top: 7px !important; font-size: 1rem !important; }
+        .boss-type1-box.boss-fit-tight { padding: 8px 11px; }
+        .boss-type1-box.boss-fit-tight #boss-relay-title { font-size: 1rem !important; margin-bottom: 2px; }
+        .boss-type1-box.boss-fit-tight #boss-relay-progress { font-size: 1rem !important; }
+        .boss-type1-box.boss-fit-tight #boss-timer { font-size: 0.82rem !important; padding: 3px 10px; }
+        .boss-type1-box.boss-fit-tight #boss-relay-group { font-size: 1.2rem !important; margin-top: 3px !important; }
+        .boss-type1-box.boss-fit-tight #boss-relay-kind { font-size: 0.88rem !important; margin-top: 2px !important; }
+        .boss-type1-box.boss-fit-tight #boss-t1-word { font-size: clamp(1.05rem, 2.7vw, 1.55rem); margin: 3px 0; line-height: 1.05; }
+        .boss-type1-box.boss-fit-tight #boss-relay-options { gap: 4px; }
+        .boss-type1-box.boss-fit-tight #boss-relay-options .task-btn { min-height: 29px; padding: 4px 7px; font-size: 0.78rem; line-height: 1.08; }
+        .boss-type1-box.boss-fit-tight #boss-relay-feedback { min-height: 16px !important; margin-top: 3px !important; font-size: 0.82rem !important; }
+        .boss-type1-box.boss-fit-tight #boss-test-pass { margin-top: 5px !important; padding: 5px 10px; font-size: 0.85rem; }
+        @media (max-height: 700px) {
+            .boss-glitch-text { font-size: 1.55rem; margin-bottom: 4px; }
+            .boss-timer-text { font-size: 0.95rem; }
+            .boss-type1-box { max-height: none; }
+            #boss-t1-word { font-size: 1.8rem; margin: 8px 0; }
+            .task-btn { padding: 7px 10px; font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="side-alert-left" class="side-alert left"></div>
+    <div id="side-alert-right" class="side-alert right"></div>
+
+    <div id="game-nav" class="top-info" style="display: none;">
+        <div class="level-badge" id="level-badge">第 1 关</div>
+        <div class="hero-badge" id="hero-badge">Lv.1 小小守护者｜木杖敲击</div>
+        <button class="btn-pause" onclick="togglePause()" id="pause-btn">暂停</button>
+        <button class="btn-restart" onclick="restartLevel()">重开本关</button>
+        <button class="btn-set" onclick="openSettings()">设置 / 测试</button>
+    </div>
+
+    <div id="menu-screen" class="screen active">
+        <div class="menu-box">
+            <h1 style="margin-top: 0; font-size: 2.2rem; text-shadow: 0 2px 5px #000; color: #f1c40f;">🧙‍♂️ 神兽试炼</h1>
+            <div style="text-align: left; line-height: 1.7; font-size: 1.05rem; margin-bottom: 25px; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px;">
+                🌙 <b>新版玩法：</b>守护者与每关神兽合作，守住课堂梦境结界！<br>
+                🦊 <b>神兽守左路：</b>击退左侧噪音小怪。<br>
+                🧙‍♂️ <b>守护者守右路：</b>每过一关解锁更强技能。<br>
+                ✨ <b>课堂能量：</b>保持安静、完成挑战，释放华丽技能清怪。<br>
+                🐉 <b>七关终章：</b>最终与东方神龙一起开启全班许愿池！
+            </div>
+            
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button class="btn-main" style="font-size: 1.5rem; padding: 15px 50px;" onclick="startGame(0)">进入课堂</button>
+                <button id="toggle-bgm-main" class="btn-music" onclick="toggleBGMState()">🎵 音乐: 开</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div class="time-display" id="time-text">00:30</div>
+        <div class="seal-text" id="seal-text">梦境结界展开！小怪暂停 10 秒！</div>
+        <div id="challenge-group-callout">请第 1 组进行选择题作答</div>
+        
+        <div class="header-box">
+            <h2 id="status-msg" style="text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-size: 1.6rem; margin:0;">全班保持安静...</h2>
+            <h2 style="text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-size: 1.6rem; margin:0;">连对: <span id="combo-text" style="color:#f1c40f;">0/3</span></h2>
+        </div>
+        
+        <div class="battle-stage" id="battle-stage">
+            <div class="seal-overlay" id="seal-overlay"></div>
+            <div class="battlefield-layer" id="projectile-layer"></div>
+            <div class="battlefield-layer" id="effect-layer"></div>
+            <div class="battle-banner" id="battle-banner">神兽守左路，守护者守右路</div>
+            <div class="challenge-chip-row">
+                <div class="challenge-chip left" id="challenge-group-chip"></div>
+                <div class="challenge-chip right" id="challenge-subj-chip"></div>
+            </div>
+            <div class="top-meter top-meter-left">
+                <div class="top-meter-label">实时音量</div>
+                <div class="top-meter-bar">
+                    <div id="vol-fill" class="bar-fill"></div>
+                    <div id="red-line" class="threshold-line" style="left: 25%;"></div>
+                </div>
+            </div>
+            <div class="top-meter top-meter-right">
+                <div class="top-meter-label">噪音蓄水池</div>
+                <div class="top-meter-bar">
+                    <div id="noise-acc-fill" class="bar-fill"></div>
+                    <div class="danger-grid">
+                        <div class="danger-block" id="d-1"></div>
+                        <div class="danger-block" id="d-2"></div>
+                        <div class="danger-block" id="d-3"></div>
+                        <div class="danger-block" id="d-4"></div>
+                        <div class="danger-block" id="d-5"></div>
+                        <div class="danger-block" id="d-6"></div>
+                        <div class="danger-block" id="d-7"></div>
+                        <div class="danger-block" id="d-8"></div>
+                        <div class="danger-block" id="d-9"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="fighter-zone left-fighter-zone">
+                <div class="fighter-skill-label" id="beast-skill-label">灵狐：灵光突袭</div>
+                <div class="fighter-label" id="beast-name">灵狐</div>
+                <span class="fighter beast idle-beast" id="monster-emoji"></span>
+            </div>
+            <div class="lane left-lane">
+                <div class="lane-title">左路小怪区 · 神兽负责</div>
+                <div class="monster-stream left-stream" id="left-monsters"></div>
+            </div>
+            <div class="battle-center" id="monster">
+                <div id="challenge-box">
+                    <div id="challenge-title">挑战</div>
+                    <div id="challenge-timer">剩余: 10s</div>
+                    <div id="bomb-icon" class="bomb-icon"></div>
+                    <div id="challenge-text">题目内容</div>
+                    
+                    <div id="reading-bar-wrap" class="reading-bar-wrap">
+                        <span class="reading-label">发声蓄力中...</span>
+                        <div id="reading-fill" class="reading-bar-fill"></div>
+                    </div>
+                    <div id="task-options" class="task-options"></div>
+                    <button id="challenge-test-pass" class="btn-main" style="display:none; margin-top:15px;" onclick="this.style.display='none'; finishChallenge(true, '✅ 测试模式通过！')">✅ 测试通过</button>
+                </div>
+                <div id="boss-container">
+                    <h1 class="boss-glitch-text">终极狂暴：最后 60 秒！</h1>
+                    
+                    <div id="boss-type1-ui" class="boss-type1-box" style="display:none;">
+                        <h2 id="boss-relay-title" style="color: #fff; margin-top: 0;">终极挑战</h2>
+                        <div id="boss-relay-subtitle" style="font-size:1.1rem; margin-bottom:10px;">八个小组依次完成挑战，点亮觉醒能量！</div>
+                        <div id="boss-relay-progress" style="font-size:1.5rem; color:#f1c40f; font-weight:bold;">觉醒能量：0 / 8</div>
+                        <div id="boss-timer" class="boss-timer-text">剩余：10s</div>
+                        <div id="boss-relay-group" style="font-size:1.5rem;">请第 1 组准备作答</div>
+                        <div id="boss-relay-kind" style="font-size:1.2rem; margin-top:8px;">英语朗读</div>
+                        <div id="boss-t1-word">WORD</div>
+                        <div id="boss-reading-wrap" class="reading-bar-wrap" style="display:block;">
+                            <span class="reading-label" style="color:#fff; text-shadow: 1px 1px 2px #000;">声量蓄力中...</span>
+                            <div id="boss-t1-fill" class="reading-bar-fill"></div>
+                        </div>
+                        <div id="boss-relay-options" class="task-options" style="display:none;"></div>
+                        <div id="boss-relay-feedback" style="min-height:32px; margin-top:12px; font-size:1.2rem; font-weight:bold;"></div>
+                        <button id="boss-test-pass" class="btn-main" style="display:none; margin-top:15px;" onclick="this.style.display='none'; finishBossStep(true)">✅ 测试通过</button>
+                    </div>
+
+                    <div id="boss-type2-ui" class="boss-split-container" style="display:none;">
+                        <div class="boss-split-box">
+                            <h2 id="boss-sideA-group" class="boss-split-group">第X组</h2>
+                            <div id="boss-sideA-q" class="boss-split-q">问题 A</div>
+                            <div id="boss-sideA-opts" class="task-options" style="display:flex;"></div>
+                            <div id="boss-sideA-status" class="boss-split-status"></div>
+                        </div>
+                        <div class="boss-split-box">
+                            <h2 id="boss-sideB-group" class="boss-split-group">第Y组</h2>
+                            <div id="boss-sideB-q" class="boss-split-q">问题 B</div>
+                            <div id="boss-sideB-opts" class="task-options" style="display:flex;"></div>
+                            <div id="boss-sideB-status" class="boss-split-status"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="battle-effect" id="battle-effect"></div>
+            </div>
+            <div class="lane right-lane">
+                <div class="lane-title">右路小怪区 · 守护者负责</div>
+                <div class="monster-stream right-stream" id="right-monsters"></div>
+            </div>
+            <div class="fighter-zone right-fighter-zone">
+                <div class="fighter-skill-label" id="hero-skill-label">守护者：木杖敲击</div>
+                <div class="fighter-label" id="hero-name">Lv.1 小小守护者</div>
+                <span class="fighter hero idle-hero" id="hero-emoji"></span>
+            </div>
+        </div>
+
+        <div class="removed-status-bars">
+            <div id="evolve-fill" class="bar-fill"></div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin-top:0; color:white;">⚙️ 难度设置</h3>
+            <div class="setting-item">
+                <label>本关总时长: <span id="set-time-val"></span> 秒</label>
+                <input type="range" id="input-time" min="10" max="400" step="10" oninput="updateSetUI()">
+            </div>
+            <div class="setting-item">
+                <label>环境噪音红线: <span id="set-line-val"></span>%</label>
+                <input type="range" id="input-line" min="5" max="80" oninput="updateSetUI()">
+            </div>
+            <div class="setting-item">
+                <label>朗读达标音量: <span id="set-read-line-val"></span>%</label>
+                <input type="range" id="input-read-line" min="20" max="90" step="5" oninput="updateSetUI()">
+            </div>
+            <div class="setting-item">
+                <label>
+                    <input type="checkbox" id="input-test-mode" onchange="updateSetUI()">
+                    测试模式：音量题显示“一键通过”按钮
+                </label>
+            </div>
+            <button class="btn-main" style="width:100%; margin-top:10px;" onclick="closeSettings()">保存并继续</button>
+            <button class="btn-set" style="width:100%; margin-top:10px;" onclick="skipLevelTest()">🚀 测试下一关</button>
+        </div>
+    </div>
+
+    <div id="result-screen" class="screen">
+        <div class="menu-box" style="width: 100%; max-width: 600px;">
+            <h1 id="res-title" style="font-size: 3rem;">通关！</h1>
+            <div id="res-emoji-container" style="margin: 20px 0; display: flex; justify-content: center; align-items: center;">
+                <span id="res-emoji" style="font-size: 120px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.6));">🐈</span>
+            </div>
+            <p id="res-desc" style="font-size: 1.4rem; margin: 20px 0; font-weight: bold;"></p>
+            
+            <div id="wish-box">
+                <input type="text" id="wish-input" placeholder="请输入全班的愿望..." autocomplete="off">
+                <button class="btn-main" style="font-size: 1.5rem; padding: 12px 40px;" onclick="grantWish()">🙏 虔诚许愿</button>
+                <div id="wish-granted" class="wish-granted-text">✨ 愿望已结成契约！✨</div>
+            </div>
+
+            <div id="res-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 25px;"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 增强版 BGM 与 SFX 系统 ---
+        let isBgmEnabled = true;
+        const SynthBGM = {
+            ctx: null, isPlaying: false, timer: null, step: 0, volume: 0.06, isBossMode: false,
+            normalNotes: [ 130.81, 0, 196.00, 0, 261.63, 0, 196.00, 0, 103.83, 0, 155.56, 0, 207.65, 0, 155.56, 0, 87.31, 0, 130.81, 0, 174.61, 0, 130.81, 0, 98.00, 0, 146.83, 0, 196.00, 0, 146.83, 0 ],
+            bossNotes: [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 261.63, 329.63], // 明亮接力赛旋律
+            
+            init(audioCtx) { this.ctx = audioCtx; },
+            
+            setBossMode(active) {
+                if(this.isBossMode === active) return;
+                this.isBossMode = active;
+                if(this.isPlaying) {
+                    clearInterval(this.timer);
+                    this.timer = setInterval(() => this.playNote(), this.isBossMode ? 180 : 150);
+                }
+            },
+
+            playNote() {
+                if (!this.isPlaying || !isBgmEnabled) return;
+                let currentArr = this.isBossMode ? this.bossNotes : this.normalNotes;
+                this.step = this.step % currentArr.length;
+                let freq = currentArr[this.step];
+                
+                if (state.isSealed) freq *= 1.5; 
+                
+                if (freq > 0) {
+                    const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                    osc.type = state.isSealed ? 'sine' : (this.isBossMode ? 'triangle' : 'square'); 
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(this.volume * (this.isBossMode ? 1.2 : 1), this.ctx.currentTime); // Boss战音量略增
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + (this.isBossMode ? 0.14 : 0.15)); 
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(); osc.stop(this.ctx.currentTime + (this.isBossMode ? 0.14 : 0.15));
+                }
+                this.step++;
+            },
+            start() { if (this.isPlaying || !this.ctx || !isBgmEnabled) return; this.isPlaying = true; this.timer = setInterval(() => this.playNote(), this.isBossMode ? 180 : 150); },
+            stop() { this.isPlaying = false; if (this.timer) clearInterval(this.timer); }
+        };
+        
+        function toggleBGMState() {
+            isBgmEnabled = !isBgmEnabled; let txt = isBgmEnabled ? "🎵 音乐: 开" : "🔇 音乐: 关";
+            document.getElementById('toggle-bgm-main').innerText = txt;
+            if (isBgmEnabled && state.isPlaying && !state.isPaused) SynthBGM.start(); else SynthBGM.stop();
+        }
+
+        const SFX = {
+            ctx: null,
+            init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); SynthBGM.init(this.ctx); },
+            playTone(f, t, d, v=0.1) {
+                if(!this.ctx) return; const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = t; osc.frequency.setValueAtTime(f, this.ctx.currentTime); gain.gain.setValueAtTime(v, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + d); osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + d);
+            },
+            tick() { this.playTone(880, 'square', 0.1, 0.05); }, 
+            success() { this.playTone(523.25, 'sine', 0.2, 0.2); setTimeout(() => this.playTone(659.25, 'sine', 0.4, 0.2), 150); },
+            fail() { this.playTone(150, 'sawtooth', 0.8, 0.3); },
+            seal() { this.playTone(880, 'sine', 0.5, 0.2); setTimeout(() => this.playTone(1046, 'sine', 1, 0.2), 300); },
+            dragonRoar() { this.playTone(100, 'sawtooth', 1.5, 0.4); setTimeout(() => this.playTone(80, 'square', 2, 0.3), 200); }
+        };
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function makeSvgDataUri(svg) {
+            return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+        }
+
+        function makeBadgeIcon(label, bg1, bg2, accent = '#ffffff') {
+            return makeSvgDataUri(
+                `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+                    <defs>
+                        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="${bg1}"/>
+                            <stop offset="100%" stop-color="${bg2}"/>
+                        </linearGradient>
+                    </defs>
+                    <circle cx="64" cy="64" r="58" fill="url(#g)" stroke="${accent}" stroke-width="8"/>
+                    <circle cx="64" cy="64" r="48" fill="rgba(255,255,255,0.08)"/>
+                    <text x="64" y="78" text-anchor="middle" font-size="52" font-family="'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif" font-weight="700" fill="#ffffff">${label}</text>
+                </svg>`
+            );
+        }
+
+        const ASSET_BASE = './assets';
+        function makeAssetIcon(fileName, fallback, label) {
+            return { src: `${ASSET_BASE}/${fileName}`, fallback, label };
+        }
+
+        const ICON_LIBRARY = {
+            'guardian-lv1': makeAssetIcon('guardian_lv1.png', '守', 'Lv.1 守护者'),
+            'guardian-lv2': makeAssetIcon('guardian_lv2.png', '守', 'Lv.2 守护者'),
+            'guardian-lv3': makeAssetIcon('guardian_lv3.png', '守', 'Lv.3 守护者'),
+            'guardian-lv4': makeAssetIcon('guardian_lv4.png', '守', 'Lv.4 守护者'),
+            'guardian-lv5': makeAssetIcon('guardian_lv5.png', '守', 'Lv.5 守护者'),
+            'guardian-lv6': makeAssetIcon('guardian_lv6.png', '守', 'Lv.6 守护者'),
+            'guardian-lv7': makeAssetIcon('guardian_lv7.png', '守', 'Lv.7 守护者'),
+            'beast-fox': makeAssetIcon('beast_fox.png', '狐', '灵狐'),
+            'beast-tiger': makeAssetIcon('beast_tiger.png', '虎', '雷纹虎'),
+            'beast-unicorn': makeAssetIcon('beast_unicorn.png', '角', '星辉独角兽'),
+            'beast-drake': makeAssetIcon('beast_drake.png', '龙', '云纹小龙'),
+            'beast-lion': makeAssetIcon('beast_lion.png', '狮', '金焰狮王'),
+            'beast-whale': makeAssetIcon('beast_whale.png', '鲸', '星海巨鲸'),
+            'beast-dragon': makeAssetIcon('beast_dragon.png', '神', '东方神龙'),
+            'mob-noise': makeAssetIcon('mob_noise.png', '噪', '噪音怪'),
+            'mob-shadow': makeAssetIcon('mob_shadow.png', '影', '影子怪'),
+            'mob-bug': makeAssetIcon('mob_bug.png', '虫', '小虫怪'),
+            'mob-rage': makeAssetIcon('mob_rage.png', '怪', '狂躁怪'),
+            'proj-light': makeAssetIcon('proj_light.png', '光', '灵光'),
+            'proj-lightning': makeAssetIcon('proj_lightning.png', '雷', '雷击'),
+            'proj-rainbow': makeAssetIcon('proj_rainbow.png', '彩', '虹光'),
+            'proj-wind': makeAssetIcon('proj_wind.png', '风', '旋风'),
+            'proj-wave': makeAssetIcon('proj_wave.png', '波', '海浪'),
+            'proj-fire': makeAssetIcon('proj_fire.png', '火', '烈焰'),
+            'proj-cosmos': makeAssetIcon('proj_cosmos.png', '星', '星海'),
+            'proj-note': makeAssetIcon('proj_note.png', '音', '鲸歌'),
+            'proj-comet': makeAssetIcon('proj_comet.png', '彗', '星陨'),
+            'effect-spark': makeAssetIcon('effect_spark.png', '光', '闪光'),
+            'effect-burst': makeAssetIcon('effect_burst.png', '爆', '爆发'),
+            'effect-answer': makeAssetIcon('effect_answer.png', '合', '合击'),
+            'effect-alert': makeAssetIcon('effect_alert.png', '危', '警告'),
+            'effect-question': makeAssetIcon('effect_question.png', '问', '提问'),
+            'effect-sound': makeAssetIcon('effect_sound.png', '声', '发声'),
+            'effect-bomb': makeAssetIcon('effect_bomb.png', '炸', '炸弹'),
+            'effect-shield': makeAssetIcon('effect_shield.png', '盾', '护盾'),
+            'weapon-wood-staff': makeAssetIcon('weapon_wood_staff.png', '杖', '木杖'),
+            'weapon-starlight-staff': makeAssetIcon('weapon_starlight_staff.png', '杖', '星光法杖'),
+            'weapon-element-staff': makeAssetIcon('weapon_element_staff.png', '杖', '元素法杖'),
+            'weapon-comet-focus': makeAssetIcon('weapon_comet_focus.png', '器', '星陨法器')
+        };
+
+        function getGuardianIconKey(level = getHeroLevel()) {
+            const safeLevel = Math.max(1, Math.min(7, Number(level) || 1));
+            return `guardian-lv${safeLevel}`;
+        }
+
+        function resolveIconKey(iconKey) {
+            if(iconKey === 'hero-guardian') return getGuardianIconKey();
+            return iconKey;
+        }
+
+        function renderIcon(iconKey, className = '') {
+            const resolvedKey = resolveIconKey(iconKey);
+            const icon = ICON_LIBRARY[resolvedKey];
+            if(!icon) return `<span class="${escapeHtml(className)}">${escapeHtml(iconKey || '')}</span>`;
+            const classes = ['ui-icon-shell'];
+            if(className) classes.push(className);
+            return `<span class="${classes.join(' ')}" role="img" aria-label="${escapeHtml(icon.label)}" title="${escapeHtml(icon.label)}"><span class="ui-icon-fallback">${escapeHtml(icon.fallback)}</span><img class="ui-icon-img" src="${icon.src}" alt="${escapeHtml(icon.label)}" onerror="this.parentNode.classList.add('icon-fallback');this.remove()"></span>`;
+        }
+
+        function renderVisualPart(part, className = '') {
+            if(Array.isArray(part)) return renderVisualValue(part, className);
+            if(typeof part === 'string' && ICON_LIBRARY[resolveIconKey(part)]) return renderIcon(part, className);
+            const text = part == null ? '' : String(part);
+            const cls = className ? ` class="${escapeHtml(className)}"` : '';
+            return `<span${cls}>${escapeHtml(text)}</span>`;
+        }
+
+        function renderVisualValue(value, className = '') {
+            if(Array.isArray(value)) {
+                const cls = className ? ` ${className}` : '';
+                return `<span class="ui-icon-pack${cls}">${value.map(part => renderVisualPart(part)).join('')}</span>`;
+            }
+            return renderVisualPart(value, className);
+        }
+
+        function renderLabelWithIcon(iconKey, text) {
+            return `<span class="ui-label-with-icon">${renderIcon(iconKey)}<span>${escapeHtml(text)}</span></span>`;
+        }
+
+        // --- 分学期英语题库（外研新交际 + 人教版PEP） ---
+        const vocabBySemester = {
+            // 一上：基础问候、数字、颜色、动物、学校、家庭、食物、身体
+            '1a': [
+                'hello(你好)', 'hi(嗨)', 'goodbye(再见)', 'bye(再见)', 'I(我)', 'you(你)', 'he(他)', 'she(她)', 'it(它)', 'is(是)', 'am(是)', 'are(是)',
+                'yes(是的)', 'no(不)', 'a(一个)', 'my(我的)', 'your(你的)', 'what(什么)', 'this(这个)', 'that(那个)',
+                'one(一)', 'two(二)', 'three(三)', 'four(四)', 'five(五)', 'six(六)', 'seven(七)', 'eight(八)', 'nine(九)', 'ten(十)',
+                'red(红色)', 'blue(蓝色)', 'green(绿色)', 'yellow(黄色)', 'black(黑色)', 'white(白色)', 'orange(橙色)', 'pink(粉色)', 'purple(紫色)',
+                'cat(猫)', 'dog(狗)', 'bird(鸟)', 'fish(鱼)', 'pig(猪)', 'duck(鸭子)', 'hen(母鸡)', 'cow(奶牛)', 'sheep(绵羊)', 'horse(马)', 'monkey(猴子)', 'tiger(老虎)', 'lion(狮子)', 'bear(熊)', 'elephant(大象)', 'mouse(老鼠)', 'rabbit(兔子)', 'panda(熊猫)',
+                'book(书)', 'pen(钢笔)', 'pencil(铅笔)', 'bag(书包)', 'ruler(尺子)', 'eraser(橡皮)', 'desk(书桌)', 'chair(椅子)', 'teacher(老师)', 'school(学校)',
+                'mother(妈妈)', 'father(爸爸)', 'mum(妈妈)', 'dad(爸爸)', 'brother(兄弟)', 'sister(姐妹)', 'grandma(奶奶)', 'grandpa(爷爷)',
+                'apple(苹果)', 'banana(香蕉)', 'orange(橘子)', 'pear(梨)', 'cake(蛋糕)', 'egg(鸡蛋)', 'milk(牛奶)', 'water(水)', 'rice(米饭)',
+                'head(头)', 'eye(眼睛)', 'ear(耳朵)', 'nose(鼻子)', 'mouth(嘴巴)', 'face(脸)', 'hand(手)', 'foot(脚)'
+            ],
+            // 一下：更多动物、食物、动作、感受、衣物、天气
+            '1b': [
+                'chicken(小鸡)', 'frog(青蛙)', 'snake(蛇)', 'butterfly(蝴蝶)', 'bee(蜜蜂)',
+                'bread(面包)', 'noodle(面条)', 'meat(肉)', 'juice(果汁)', 'soup(汤)', 'ice cream(冰淇淋)', 'sweet(糖果)', 'chocolate(巧克力)',
+                'arm(手臂)', 'leg(腿)', 'body(身体)', 'tail(尾巴)',
+                'look(看)', 'listen(听)', 'sit(坐)', 'stand(站)', 'open(打开)', 'close(关上)', 'read(读)', 'write(写)', 'draw(画)', 'sing(唱)', 'dance(跳舞)', 'play(玩)', 'run(跑)', 'jump(跳)', 'walk(走)', 'swim(游泳)', 'fly(飞)', 'eat(吃)', 'drink(喝)', 'sleep(睡觉)',
+                'happy(开心的)', 'sad(难过的)', 'hot(热的)', 'cold(冷的)', 'hungry(饿的)', 'thirsty(渴的)', 'tired(累的)',
+                'big(大的)', 'small(小的)', 'tall(高的)', 'short(矮的)', 'fat(胖的)', 'thin(瘦的)', 'long(长的)', 'new(新的)', 'old(旧的)', 'nice(好的)', 'beautiful(美丽的)', 'great(太棒了)',
+                'coat(外套)', 'hat(帽子)', 'dress(连衣裙)', 'shirt(衬衫)', 'T-shirt(T恤)', 'shoes(鞋子)', 'trousers(裤子)', 'sweater(毛衣)',
+                'classroom(教室)', 'door(门)', 'window(窗户)', 'blackboard(黑板)', 'picture(图画)', 'computer(电脑)',
+                'sunny(晴朗的)', 'cloudy(多云的)', 'rainy(下雨的)', 'windy(有风的)', 'snowy(下雪的)', 'warm(温暖的)', 'cool(凉爽的)',
+                'friend(朋友)', 'name(名字)', 'birthday(生日)', 'present(礼物)', 'party(派对)', 'ball(球)', 'kite(风筝)', 'doll(娃娃)', 'bike(自行车)', 'toy(玩具)'
+            ],
+            // 二上：时间、季节、地点、交通、运动、学科
+            '2a': [
+                'morning(早上)', 'afternoon(下午)', 'evening(傍晚)', 'night(夜晚)', 'today(今天)', 'tomorrow(明天)', 'yesterday(昨天)', 'week(星期)',
+                'Monday(星期一)', 'Tuesday(星期二)', 'Wednesday(星期三)', 'Thursday(星期四)', 'Friday(星期五)', 'Saturday(星期六)', 'Sunday(星期日)',
+                'spring(春天)', 'summer(夏天)', 'autumn(秋天)', 'winter(冬天)', 'season(季节)',
+                'weather(天气)', 'rain(雨)', 'snow(雪)', 'wind(风)', 'cloud(云)', 'sun(太阳)', 'moon(月亮)', 'star(星星)',
+                'park(公园)', 'zoo(动物园)', 'farm(农场)', 'home(家)', 'shop(商店)', 'hospital(医院)', 'library(图书馆)', 'playground(操场)', 'supermarket(超市)',
+                'bus(公交车)', 'train(火车)', 'plane(飞机)', 'car(汽车)', 'ship(轮船)', 'boat(小船)', 'taxi(出租车)',
+                'get up(起床)', 'go to school(去上学)', 'go home(回家)', 'go to bed(上床睡觉)',
+                'watch TV(看电视)', 'read books(读书)', 'do homework(做作业)',
+                'play football(踢足球)', 'play basketball(打篮球)', 'ride a bike(骑自行车)', 'fly a kite(放风筝)', 'listen to music(听音乐)',
+                'football(足球)', 'basketball(篮球)', 'table tennis(乒乓球)', 'swimming(游泳)', 'running(跑步)', 'skipping(跳绳)',
+                'tea(茶)', 'coffee(咖啡)', 'vegetable(蔬菜)', 'fruit(水果)', 'chicken(鸡肉)',
+                'Chinese(语文)', 'English(英语)', 'maths(数学)', 'music(音乐)', 'art(美术)', 'PE(体育)', 'science(科学)', 'favourite(最喜欢的)', 'subject(科目)',
+                'song(歌曲)', 'story(故事)', 'game(游戏)', 'colour(颜色)'
+            ],
+            // 二下：节日、活动、自然、工作、食物进阶
+            '2b': [
+                'New Year(新年)', 'Spring Festival(春节)', 'Christmas(圣诞节)', "Children's Day(儿童节)", "Mother's Day(母亲节)", "Father's Day(父亲节)",
+                'sing songs(唱歌)', 'paint(画画)', 'cook(做饭)', 'clean(打扫)', 'wash(洗)', 'help(帮助)', 'make(制作)', 'take photos(拍照)', 'send emails(发邮件)', 'use computer(用电脑)', 'play games(玩游戏)',
+                'hamburger(汉堡)', 'chips(薯条)', 'sandwich(三明治)', 'salad(沙拉)', 'picnic(野餐)', 'breakfast(早餐)', 'lunch(午餐)', 'dinner(晚餐)', 'supper(晚饭)',
+                'tree(树)', 'flower(花)', 'grass(草)', 'river(河流)', 'lake(湖)', 'sea(大海)', 'mountain(山)', 'hill(小山)', 'forest(森林)', 'island(岛屿)', 'bridge(桥)',
+                'giraffe(长颈鹿)', 'camel(骆驼)', 'shark(鲨鱼)', 'whale(鲸鱼)', 'dolphin(海豚)',
+                'lovely(可爱的)', 'cute(可爱的)', 'clever(聪明的)', 'strong(强壮的)', 'fast(快的)', 'slow(慢的)', 'high(高的)', 'low(低的)',
+                'doctor(医生)', 'nurse(护士)', 'driver(司机)', 'farmer(农民)', 'worker(工人)', 'policeman(警察)', 'singer(歌手)', 'dancer(舞者)', 'student(学生)', 'pupil(小学生)',
+                'knee(膝盖)', 'toe(脚趾)', 'finger(手指)', 'shoulder(肩膀)',
+                'leaf(树叶)', 'sky(天空)', 'rainbow(彩虹)'
+            ],
+            // 三年级：人教版PEP
+            'g3': [
+                'eleven(十一)', 'twelve(十二)', 'thirteen(十三)', 'fourteen(十四)', 'fifteen(十五)', 'sixteen(十六)', 'seventeen(十七)', 'eighteen(十八)', 'nineteen(十九)', 'twenty(二十)',
+                'thirty(三十)', 'forty(四十)', 'fifty(五十)', 'sixty(六十)', 'seventy(七十)', 'eighty(八十)', 'ninety(九十)', 'hundred(百)',
+                'wash face(洗脸)', 'brush teeth(刷牙)', 'have class(上课)', 'have lunch(吃午饭)',
+                'hot dog(热狗)', 'vegetables(蔬菜)',
+                'parrot(鹦鹉)', 'eagle(鹰)', 'owl(猫头鹰)', 'ant(蚂蚁)', 'spider(蜘蛛)',
+                'neck(脖子)', 'back(背部)', 'tooth(牙齿)',
+                'jacket(夹克)', 'scarf(围巾)', 'gloves(手套)', 'socks(袜子)', 'shorts(短裤)', 'skirt(短裙)', 'cap(帽子)', 'sunglasses(太阳镜)',
+                'brown(棕色)', 'grey(灰色)', 'golden(金色)', 'silver(银色)',
+                'uncle(叔叔)', 'aunt(阿姨)', 'cousin(表亲)', 'son(儿子)', 'daughter(女儿)', 'parents(父母)', 'grandparents(祖父母)',
+                'card(卡片)', 'balloon(气球)', 'candle(蜡烛)', 'year(年)', 'month(月)', 'day(日)', 'date(日期)',
+                'how many(多少)', 'how much(多少钱)', 'welcome(欢迎)', 'please(请)', 'thank you(谢谢)', 'sorry(对不起)',
+                'pupil(学生)', 'boy(男孩)', 'girl(女孩)', 'man(男人)', 'woman(女人)', 'baby(婴儿)',
+                'on(在……上面)', 'in(在……里面)', 'under(在……下面)', 'behind(在……后面)',
+                'map(地图)', 'clock(钟)', 'photo(照片)', 'plant(植物)', 'bottle(瓶子)', 'water bottle(水壶)', 'bike(自行车)',
+                'mouse(老鼠)', 'key(钥匙)', 'notebook(笔记本)', 'candy(糖果)', 'toy(玩具)', 'phone(电话)', 'sofa(沙发)', 'fridge(冰箱)', 'table(桌子)', 'bed(床)', 'room(房间)', 'study(书房)', 'kitchen(厨房)', 'bathroom(浴室)', 'living room(客厅)'
+            ],
+            // 四年级：人教版PEP
+            'g4': [
+                'first floor(一楼)', 'second floor(二楼)', 'gym(体育馆)', 'office(办公室)', 'toilet(卫生间)', 'floor(地板)', 'wall(墙壁)', 'board(板)', 'fan(风扇)', 'light(灯)',
+                "teachers' desk(讲台)", 'lunch room(餐厅)', 'art room(美术教室)', 'music room(音乐教室)', 'computer room(电脑室)',
+                'what time(几点)', 'when(什么时候)', 'now(现在)', 'early(早的)', 'late(晚的)',
+                'always(总是)', 'usually(通常)', 'often(经常)', 'sometimes(有时)', 'never(从不)',
+                'degree(度)', 'temperature(温度)', 'foggy(有雾的)', 'stormy(暴风雨的)',
+                'pants(长裤)', 'jeans(牛仔裤)', 'boots(靴子)', 'slippers(拖鞋)', 'umbrella(雨伞)',
+                'store(商店)', 'market(市场)', 'buy(买)', 'sell(卖)', 'cheap(便宜的)', 'expensive(贵的)', 'yuan(元)', 'dollar(美元)', 'pound(英镑)', 'size(尺码)', 'try on(试穿)', 'of course(当然)',
+                'garden(花园)', 'potato(土豆)', 'tomato(西红柿)', 'carrot(胡萝卜)', 'onion(洋葱)', 'bean(豆子)', 'corn(玉米)', 'watermelon(西瓜)', 'strawberry(草莓)', 'grape(葡萄)',
+                'goat(山羊)', 'sheep(绵羊)',
+                'weather report(天气预报)', 'be careful(小心)', 'how about(……怎么样)', 'just right(正好)'
+            ],
+            // 五年级：人教版PEP
+            'g5': [
+                'January(一月)', 'February(二月)', 'March(三月)', 'April(四月)', 'May(五月)', 'June(六月)', 'July(七月)', 'August(八月)', 'September(九月)', 'October(十月)', 'November(十一月)', 'December(十二月)',
+                'because(因为)', 'why(为什么)', 'which(哪一个)', 'best(最好的)', 'favorite(最喜欢的)',
+                'vacation(假期)', 'pick(采摘)', 'make a snowman(堆雪人)', 'plant(种植)', 'go on a picnic(去野餐)', 'go swimming(去游泳)', 'fly kites(放风筝)', 'go hiking(去远足)',
+                "New Year's Day(元旦)", 'Lantern Festival(元宵节)', 'Dragon Boat Festival(端午节)', 'Mid-Autumn Festival(中秋节)', 'National Day(国庆节)', 'Easter(复活节)', 'Thanksgiving(感恩节)', 'Halloween(万圣节)', "May Day(劳动节)", "Teachers' Day(教师节)",
+                'start(开始)', 'finish(完成)', 'begin(开始)', 'end(结束)',
+                'exercise(运动)', 'clean my room(打扫房间)', 'go for a walk(散步)', 'go shopping(购物)', 'take a dancing class(上舞蹈课)', 'play sports(做运动)',
+                'do morning exercises(做早操)', 'eat breakfast(吃早饭)', 'eat dinner(吃晚饭)',
+                'wash clothes(洗衣服)', 'cook dinner(做晚饭)', 'draw pictures(画画)',
+                'play the pipa(弹琵琶)', 'do kung fu(练功夫)', 'play ping-pong(打乒乓球)',
+                'speak English(说英语)', 'sing English songs(唱英语歌)',
+                'forest(森林)', 'lake(湖)', 'village(村庄)', 'house(房子)', 'building(建筑物)', 'bridge(桥)', 'path(小路)',
+                'nature(自然)', 'fresh(新鲜的)', 'healthy(健康的)',
+                'Monday(星期一)', 'Tuesday(星期二)', 'Wednesday(星期三)', 'Thursday(星期四)', 'Friday(星期五)', 'Saturday(星期六)', 'Sunday(星期日)',
+                'weekend(周末)', 'schedule(日程表)', 'hard-working(努力的)', 'polite(有礼貌的)', 'shy(害羞的)', 'helpful(乐于助人的)',
+                'sandwich(三明治)', 'salad(沙拉)', 'hamburger(汉堡)', 'ice cream(冰淇淋)', 'tea(茶)', 'delicious(美味的)', 'sweet(甜的)', 'fresh(新鲜的)', 'hot(辣的)'
+            ]
+        };
+
+        const sentsBySemester = {
+            // 一上：最基础问候和介绍
+            '1a': [
+                'Hello!', 'Hi!', 'Goodbye!', 'Bye!', 'Good morning.', 'Good afternoon.', 'Good night.',
+                'I am Sam.', "What's your name?", 'My name is Amy.', 'How are you?', 'I am fine.', 'Thank you.',
+                'Nice to meet you.', 'Stand up.', 'Sit down.', 'Open your book.', 'Close your book.',
+                'It is red.', 'It is blue.', 'It is green.', 'It is yellow.',
+                'This is a cat.', 'That is a dog.', 'I like birds.', 'I like fish.',
+                'Look at the monkey.', 'Look at the tiger.',
+                'It is an apple.', 'It is a banana.', 'I like oranges.',
+                'How many?', 'One, two, three!', 'How many boys?', 'Five girls.',
+                'This is my mother.', 'This is my father.', 'This is my grandma.',
+                'Point to your head.', 'Point to your eyes.', 'Point to your nose.', 'Point to your mouth.'
+            ],
+            // 一下：日常对话和动作
+            '1b': [
+                'How are you?', 'I am happy.', 'I am sad.',
+                'It is hot today.', 'It is cold.', 'Are you hungry?', 'I am thirsty.',
+                'This is a big cat.', 'That is a small dog.', 'He is tall.', 'She is short.',
+                'What do you like?', 'I like noodles.', 'I like meat.', 'Do you like juice?', 'Yes, I do.', 'No, I don\'t.',
+                "Let's play!", 'I can run.', 'I can jump.', 'I can swim.', 'Can you dance?', 'Yes, I can.',
+                'Look at my coat.', 'I like your dress.', 'Put on your hat.', 'Take off your shoes.',
+                'Where is the book?', 'It is on the desk.', 'It is in the bag.', 'It is under the chair.',
+                'How is the weather?', 'It is sunny.', 'It is rainy.', 'It is windy today.',
+                'Happy birthday!', 'Thank you!', 'Here is your present.',
+                'I have a kite.', 'I have a doll.', 'This is my toy.'
+            ],
+            // 二上：时间和日常活动
+            '2a': [
+                'Good morning.', 'Good afternoon.', 'Good evening.',
+                'What day is it today?', 'It is Monday.', 'It is Friday.',
+                'I go to school on Monday.', 'We have English on Tuesday.',
+                'What is your favourite subject?', 'I like English.', 'I like music.', 'I like art.',
+                'What is the weather like?', 'It is sunny.', 'It is cloudy.', 'It is rainy.', 'It is windy.',
+                'I like spring.', 'I like summer.', 'Autumn is cool.', 'Winter is cold.',
+                'I get up at seven.', 'I go to school at eight.', 'I go home at four.', 'I go to bed at nine.',
+                'I read books.', 'I do my homework.', 'I watch TV.', 'I listen to music.',
+                'I can play football.', 'I can play basketball.', 'Can you ride a bike?', 'I can fly a kite.',
+                'Let\'s go to the park.', 'Let\'s go to the zoo.', 'Where is the hospital?',
+                'I go to school by bus.', 'I go home by car.', 'I go to Beijing by train.'
+            ],
+            // 二下：进阶表达
+            '2b': [
+                'What time is it?', 'It\'s nine o\'clock.', 'It\'s half past eight.',
+                'I have breakfast at seven.', 'I have lunch at twelve.', 'I have dinner at six.',
+                'Do you like chicken?', 'I like hamburgers.', 'I like chips.',
+                'What do you do on Sunday?', 'I sing songs.', 'I paint pictures.', 'I help my mum.',
+                'I can cook.', 'I can clean the room.', 'Let\'s make a cake.',
+                'I like trees and flowers.', 'The river is long.', 'The mountain is high.',
+                'Look at the giraffe.', 'The whale is big.', 'The dolphin can swim.',
+                'My father is a doctor.', 'My mother is a teacher.', 'He is a driver.', 'She is a nurse.',
+                'Merry Christmas!', 'Happy New Year!', 'Happy Children\'s Day!',
+                'What are you doing?', 'I am reading.', 'I am writing.', 'I am drawing.',
+                'This is my nose.', 'These are my eyes.', 'These are my ears.',
+                'I go to school.', 'I go by bus.', 'This is my dad.', 'He is a worker.'
+            ],
+            // 三年级：人教版PEP 进阶对话
+            'g3': [
+                'How old are you?', 'I am nine years old.', 'I am ten.',
+                'How many books do you have?', 'I have twelve books.', 'I have twenty pencils.',
+                'What colour is it?', 'It is brown.', 'It is grey.',
+                'Who is that man?', 'He is my father.', 'Who is that woman?', 'She is my mother.',
+                'Is he your brother?', 'Yes, he is.', 'Is she your sister?', 'No, she isn\'t.',
+                'Where is my ruler?', 'It is on the desk.', 'It is in your bag.', 'It is under the chair.',
+                'Do you like pears?', 'Yes, I do.', 'No, I don\'t.', 'Can I have some milk?', 'Here you are.',
+                'How many animals do you know?', 'Look at the elephant.', 'It has a long nose.',
+                'I get up at six o\'clock.', 'I wash my face.', 'I brush my teeth.',
+                'What do you have on Monday?', 'I have Chinese and English.',
+                'What is your name?', 'My name is Mike.', 'I am from China.', 'Where are you from?'
+            ],
+            // 四年级：人教版PEP
+            'g4': [
+                'Where is the library?', 'It is on the first floor.', 'The gym is on the second floor.',
+                'Do you have an art room?', 'Yes, we do.', 'Is that the computer room?', 'No, it isn\'t.',
+                'What time is it?', 'It\'s seven o\'clock.', 'It is time for school.', 'It is time for lunch.',
+                'What is the weather like today?', 'It is sunny and warm.', 'It is cold and snowy.',
+                'Can I wear my shirt today?', 'Yes, you can.', 'Take off your hat.',
+                'How much is this dress?', 'It is fifty yuan.', 'That is cheap.', 'It is too expensive.',
+                'Can I try it on?', 'Of course.', 'How do you like this skirt?', 'It is very pretty.',
+                'Are these carrots?', 'Yes, they are.', 'Are those tomatoes?', 'No, they aren\'t.',
+                'How many horses do you have?', 'We have seventeen.', 'What about those?', 'They are sheep.',
+                'Whose coat is this?', 'It is mine.', 'Whose pants are these?', 'They are your father\'s.'
+            ],
+            // 五年级：人教版PEP
+            'g5': [
+                'What do you have on Monday?', 'I have maths and English.',
+                'Who is your English teacher?', 'She is tall and kind.', 'He is funny.',
+                'What would you like to eat?', 'I would like a sandwich.', 'What would you like to drink?', 'I would like some tea.',
+                'What is your favourite food?', 'I love ice cream.', 'It is sweet and delicious.',
+                'What can you do?', 'I can draw pictures.', 'I can do kung fu.', 'Can you swim?', 'Yes, I can.',
+                'There is a big bed in my room.', 'There are many plants in the garden.',
+                'Is there a river in the park?', 'Yes, there is.', 'Are there any lakes?', 'No, there aren\'t.',
+                'Which season do you like best?', 'I like spring best.', 'Why?', 'Because the weather is nice.',
+                'When is your birthday?', 'My birthday is in June.', 'It is on May 1st.',
+                'What do you do on the weekend?', 'I often clean my room.', 'I sometimes go shopping.',
+                'When do you get up?', 'I usually get up at 7 o\'clock.'
+            ]
+        };
+
+        function getActiveSemesters() {
+            const level = currentLevelIndex + 1;
+            const semesters = [];
+            if (level >= 1) semesters.push('2b');
+            if (level >= 2) semesters.push('2a');
+            if (level >= 3) semesters.push('1b');
+            if (level >= 4) semesters.push('1a');
+            if (level >= 5) semesters.push('g3');
+            if (level >= 6) semesters.push('g4');
+            if (level >= 7) semesters.push('g5');
+            return semesters;
+        }
+
+        function getActiveVocab() {
+            return getActiveSemesters().flatMap(s => vocabBySemester[s] || []);
+        }
+
+        function getActiveSents() {
+            return getActiveSemesters().flatMap(s => sentsBySemester[s] || []);
+        }
+        
+        let bags = { 'vocab':[], 'sents':[], 'typeBag':[] };
+        let activeVocabCache = null;
+        let activeSentsCache = null;
+        let groupBag = [];
+        let lastTypePoolKey = '';
+
+        function getFairGroup() {
+            if(groupBag.length === 0) groupBag = [1,2,3,4,5,6,7,8].sort(() => Math.random() - 0.5);
+            return groupBag.pop();
+        }
+
+        function getShuffledItem(bagName, sourceArr) {
+            if(bags[bagName].length === 0) bags[bagName] = [...sourceArr].sort(() => Math.random() - 0.5);
+            return bags[bagName].pop();
+        }
+
+        function getChallengeTypePool() {
+            return [
+                'en-read', 'en-read', 'en-read',
+                'en-task', 'en-task', 'en-task',
+                'bomb-defuse'
+            ];
+        }
+
+        function getTypePoolKey() {
+            return 'level-' + (currentLevelIndex + 1);
+        }
+
+        function getBossRelayTypePool() {
+            return ['read', 'en-task'];
+        }
+
+        function getBossTitle() {
+            return `终极接力挑战`;
+        }
+
+        function getBossPowerName() {
+            const levelData = levelsInfo[currentLevelIndex];
+            return '合体能量';
+        }
+
+        function getBossGroupPrompt(step, task) {
+            const groupText = `第 ${step + 1} 组`;
+            if(!task) return `请${groupText}准备作答`;
+            if(task.mode === 'task') return `请${groupText}进行选择题作答`;
+            if(task.mode === 'read') return `请${groupText}进行朗读挑战`;
+            return `请${groupText}进行挑战`;
+        }
+
+        function getLevelStatusText() {
+            const levelData = levelsInfo[currentLevelIndex];
+            const textMap = {
+                1: '帮助灵狐击退低级噪音小怪，保持安静！',
+                2: '雷纹虎加入试炼队，安静能让攻击更稳定！',
+                3: '星辉独角兽正在净化怪潮，准备 Boss 合体战！',
+                4: '云纹小龙守护云海遗迹，控制音量别让小怪突破！',
+                5: '金焰狮王点燃烈阳神殿，答题成功释放火焰合击！',
+                6: '星海巨鲸唱响鲸歌，守住梦海深渊！',
+                7: '东方神龙降临最终结界，全班合力完成试炼！'
+            };
+            return textMap[levelData.id] || '全班保持安静，守住梦境结界！';
+        }
+
+        function generateChallengeData() {
+            let poolKey = getTypePoolKey();
+            let availableTypes = getChallengeTypePool();
+            if(lastTypePoolKey !== poolKey) {
+                bags['typeBag'] = [];
+                lastTypePoolKey = poolKey;
+            }
+            if(bags['typeBag'].length === 0) bags['typeBag'] = [...availableTypes].sort(() => Math.random() - 0.5);
+            
+            let type = bags['typeBag'].pop();
+            let data = { mode: '', subj: '', text: '', ans: '', opts: [], group: '全班' };
+            let targetGroup = getFairGroup();
+
+            switch(type) {
+                case 'en-read':
+                    data.subj = '英语口语'; data.text = getShuffledItem('sents', getActiveSents());
+                    if(Math.random()>0.3) { data.mode = 'read'; data.group = `第 ${targetGroup} 组`; }
+                    else { data.mode = 'class-read'; data.group = `全班齐读`; }
+                    break;
+                case 'en-task':
+                    data.mode = 'task'; data.subj = '英语翻译'; data.group = `第 ${targetGroup} 组`;
+                    let activeVocab = getActiveVocab();
+                    let w = getShuffledItem('vocab', activeVocab);
+                    data.text = w.split('(')[0]; data.ans = w.split('(')[1].replace(')','');
+                    // 从当前学段词汇中随机抽取干扰项
+                    let wrongPool = activeVocab
+                        .map(item => { let m = item.match(/.+\((.+)\)/); return m ? m[1] : item; })
+                        .filter(item => item !== data.ans)
+                        .sort(() => Math.random() - 0.5)
+                        .slice(0, 2);
+                    // 如果干扰项不足则补充
+                    while (wrongPool.length < 2) wrongPool.push(wrongPool.length === 0 ? '✗' : '✗✗');
+                    data.opts = [data.ans, ...wrongPool].sort(() => Math.random() - 0.5);
+                    break;
+                case 'bomb-defuse':
+                    data.mode = 'bomb-defuse'; data.subj = '紧急拆除'; data.group = `第 ${targetGroup} 组`;
+                    data.text = getShuffledItem('vocab', getActiveVocab()).split('(')[0];
+                    break;
+            }
+            return data;
+        }
+
+        const heroInfo = { emoji: 'hero-guardian', name: '小小守护者' };
+
+        function getHeroLevel() {
+            return currentLevelIndex + 1;
+        }
+
+        const levelsInfo = [
+            { id: 1, duration: 60,  questions: 3,  threshold: 35, speed: 1.7, beastEmoji: "beast-fox", beastName: "灵狐", themeName: "梦境森林", heroSkill: "木杖敲击", beastSkill: "灵光突袭", heroProjectile: "proj-light", beastProjectile: "effect-spark", skillText: "灵狐：灵光突袭　｜　守护者：木杖敲击", monsters: ["mob-noise","mob-shadow","mob-bug","mob-bug"], comboSkill: ["proj-light","effect-burst"], answerSkillCount: 2, enemyCap: 8, spawnInterval: 2100, attackInterval: 1250, bossRushSpawnInterval: 1050, ultimateEffect: ["hero-guardian","+","beast-fox","effect-answer","effect-burst"] },
+            { id: 2, duration: 90,  questions: 5,  threshold: 24, speed: 2.8, beastEmoji: "beast-tiger", beastName: "雷纹虎", themeName: "雷鸣山谷", heroSkill: "星光散射", beastSkill: "雷爪冲击", heroProjectile: "effect-spark", beastProjectile: "proj-lightning", skillText: "雷纹虎：雷爪冲击　｜　守护者：星光散射", monsters: ["mob-noise","mob-rage","mob-shadow","mob-shadow"], comboSkill: ["effect-spark","proj-lightning","effect-burst"], answerSkillCount: 2, enemyCap: 9, spawnInterval: 1900, attackInterval: 1200, bossRushSpawnInterval: 980, ultimateEffect: ["hero-guardian","+","beast-tiger","effect-spark","proj-lightning"] },
+            { id: 3, duration: 120, questions: 8,  threshold: 21, speed: 3.2, beastEmoji: "beast-unicorn", beastName: "星辉独角兽", themeName: "星光草原", heroSkill: "旋风术", beastSkill: "星辉净化", heroProjectile: "proj-wind", beastProjectile: "proj-rainbow", skillText: "独角兽：星辉净化　｜　守护者：旋风术", monsters: ["mob-rage","mob-shadow","mob-bug","mob-rage"], comboSkill: ["proj-rainbow","proj-wind","effect-spark"], answerSkillCount: 3, enemyCap: 10, spawnInterval: 1650, attackInterval: 1160, bossRushSpawnInterval: 900, ultimateEffect: ["proj-rainbow","proj-wind","effect-answer"] },
+            { id: 4, duration: 135, questions: 10, threshold: 19, speed: 3.6, beastEmoji: "beast-drake", beastName: "云纹小龙", themeName: "云海遗迹", heroSkill: "元素连击", beastSkill: "云海冲击", heroProjectile: "proj-lightning", beastProjectile: "proj-wave", skillText: "小龙：云海冲击　｜　守护者：元素连击", monsters: ["mob-rage","mob-shadow","mob-noise","mob-bug","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-lightning","proj-wind"], answerSkillCount: 3, enemyCap: 12, spawnInterval: 1500, attackInterval: 1120, bossRushSpawnInterval: 820, ultimateEffect: ["proj-wave","proj-lightning","proj-wind"] },
+            { id: 5, duration: 150, questions: 12, threshold: 17, speed: 4.1, beastEmoji: "beast-lion", beastName: "金焰狮王", themeName: "烈阳神殿", heroSkill: "火焰冲击波", beastSkill: "金焰咆哮", heroProjectile: "proj-fire", beastProjectile: "proj-fire", skillText: "狮王：金焰咆哮　｜　守护者：火焰冲击波", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-rage","mob-shadow"], comboSkill: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillCount: 4, enemyCap: 13, spawnInterval: 1400, attackInterval: 1080, bossRushSpawnInterval: 760, ultimateEffect: ["proj-fire","effect-answer","effect-burst","proj-fire"] },
+            { id: 6, duration: 165, questions: 14, threshold: 15, speed: 4.6, beastEmoji: "beast-whale", beastName: "星海巨鲸", themeName: "梦海深渊", heroSkill: "星海法阵", beastSkill: "鲸歌安眠", heroProjectile: "proj-cosmos", beastProjectile: "proj-note", skillText: "巨鲸：鲸歌安眠　｜　守护者：星海法阵", monsters: ["mob-noise","mob-shadow","mob-rage","mob-bug","mob-noise","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-cosmos","proj-note","effect-spark"], answerSkillCount: 4, enemyCap: 14, spawnInterval: 1320, attackInterval: 1040, bossRushSpawnInterval: 700, ultimateEffect: ["proj-wave","proj-cosmos","proj-note","effect-answer"] },
+            { id: 7, duration: 180, questions: 16, threshold: 13, speed: 5.2, beastEmoji: "beast-dragon", beastName: "东方神龙", themeName: "最终梦境结界", heroSkill: "星陨法阵", beastSkill: "神龙吐息", heroProjectile: "proj-comet", beastProjectile: "proj-fire", skillText: "神龙：神龙吐息　｜　守护者：星陨法阵", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-shadow","mob-rage","mob-noise","mob-bug"], comboSkill: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-spark"], answerSkillCount: 5, enemyCap: 16, spawnInterval: 1220, attackInterval: 980, bossRushSpawnInterval: 620, ultimateEffect: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-burst"] }
+        ];
+
+        let currentLevelIndex = 0;
+        let config = { duration: 30, threshold: 35, dangerSpeed: 2, readThreshold: 45, readSpeed: 8, testMode: false };
+        const MAX_DANGER = 9;
+        
+        let state = {
+            isPlaying: false, isPaused: false, timeElapsed: 0, 
+            dangerLevel: 0, noiseAcc: 0, consecutiveCorrect: 0,
+            isSealed: false, sealTimer: 0,
+            challengeActive: false, currentChall: null, challengeDeadline: 0, readingProgress: 0,
+            challengeTimes: [], bossCleared: false, challengeResolving: false
+        };
+
+        let bossState = { active: false, phase: 1, step: 0, deadline: 0, readingProgress: 0, groups: [], sideASolved: false, sideBSolved: false, currentTask: null, resolving: false, relayResolving: false };
+        let battleState = null;
+
+        let challengeTimerId = null;
+        let challengeFeedbackTimerId = null;
+        let bossRelayTimerId = null;
+        let bossFeedbackTimerId = null;
+
+        let audio = { ctx: null, analyser: null, data: null };
+        let timerLoop = null;
+        let battleLoop = null;
+        let battleEffectTimeoutId = null;
+        let roleAnimationTimers = { hero: null, beast: null };
+        let lastTickTime = 0;
+        let lastBattleFrameTime = 0;
+
+        function clearChallengeTimers() {
+            if (challengeTimerId) {
+                clearInterval(challengeTimerId);
+                challengeTimerId = null;
+            }
+            if (challengeFeedbackTimerId) {
+                clearTimeout(challengeFeedbackTimerId);
+                challengeFeedbackTimerId = null;
+            }
+        }
+
+        function clearBossRelayTimers() {
+            if (bossRelayTimerId) {
+                clearInterval(bossRelayTimerId);
+                bossRelayTimerId = null;
+            }
+            if (bossFeedbackTimerId) {
+                clearTimeout(bossFeedbackTimerId);
+                bossFeedbackTimerId = null;
+            }
+        }
+
+        function lockOptionButtons(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const buttons = container.querySelectorAll('button, .task-btn');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.style.pointerEvents = 'none';
+            });
+        }
+
+        function refreshBattleUI() {
+            const levelData = levelsInfo[currentLevelIndex];
+            document.getElementById('hero-badge').innerHTML = renderLabelWithIcon(heroInfo.emoji, `Lv.${getHeroLevel()} ${heroInfo.name}｜${levelData.heroSkill}`);
+            document.getElementById('monster-emoji').innerHTML = renderVisualValue(levelData.beastEmoji);
+            document.getElementById('beast-name').innerHTML = renderLabelWithIcon(levelData.beastEmoji, levelData.beastName);
+            document.getElementById('hero-name').innerHTML = renderLabelWithIcon(heroInfo.emoji, `Lv.${getHeroLevel()} ${heroInfo.name}`);
+            document.getElementById('beast-skill-label').innerText = `${levelData.beastName}：${levelData.beastSkill}`;
+            document.getElementById('hero-skill-label').innerText = `守护者：${levelData.heroSkill}`;
+            document.getElementById('battle-banner').innerText = '神兽守左路，守护者守右路';
+            document.getElementById('battle-banner').className = 'battle-banner';
+            document.getElementById('challenge-group-chip').innerText = '';
+            document.getElementById('challenge-subj-chip').innerText = '';
+            document.getElementById('left-monsters').innerHTML = '';
+            document.getElementById('right-monsters').innerHTML = '';
+            document.getElementById('projectile-layer').innerHTML = '';
+            document.getElementById('effect-layer').innerHTML = '';
+            document.getElementById('battle-stage').classList.remove('noisy', 'sealed');
+            document.getElementById('monster-emoji').className = 'fighter beast idle-beast';
+            document.getElementById('hero-emoji').className = 'fighter hero idle-hero';
+            document.getElementById('hero-emoji').innerHTML = renderVisualValue(heroInfo.emoji);
+            requestAnimationFrame(positionFighterZones);
+        }
+
+        function showBattleEffect(text, duration = 700) {
+            const effect = document.getElementById('battle-effect');
+            if(!effect) return;
+            if(battleEffectTimeoutId) clearTimeout(battleEffectTimeoutId);
+            effect.innerHTML = renderVisualValue(text);
+            effect.style.display = 'flex';
+            battleEffectTimeoutId = setTimeout(() => {
+                effect.style.display = 'none';
+                effect.innerHTML = '';
+                battleEffectTimeoutId = null;
+            }, duration);
+        }
+
+        function setBattleBanner(text, mode = '') {
+            const banner = document.getElementById('battle-banner');
+            if(!banner) return;
+            banner.innerText = text;
+            banner.className = 'battle-banner' + (mode ? ` ${mode}` : '');
+        }
+
+        function updateComboUI() {
+            const comboText = document.getElementById('combo-text');
+            if(!comboText) return;
+            if(state.consecutiveCorrect >= 3) comboText.innerText = '3/3 触发结界';
+            else comboText.innerText = `${state.consecutiveCorrect}/3`;
+        }
+
+        function getLaneMetrics(side) {
+            const battleStage = document.getElementById('battle-stage');
+            const lane = document.querySelector(side === 'left' ? '.left-lane .monster-stream' : '.right-lane .monster-stream');
+            if(!battleStage || !lane) return { width: 180, height: 140, x: 0, y: 0 };
+            const battleRect = battleStage.getBoundingClientRect();
+            const laneRect = lane.getBoundingClientRect();
+            return {
+                width: laneRect.width,
+                height: laneRect.height,
+                x: laneRect.left - battleRect.left,
+                y: laneRect.top - battleRect.top
+            };
+        }
+
+        function positionFighterZones() {
+            const leftZone = document.querySelector('.left-fighter-zone');
+            const rightZone = document.querySelector('.right-fighter-zone');
+            const battleStage = document.getElementById('battle-stage');
+            const leftLane = document.querySelector('.left-lane');
+            const rightLane = document.querySelector('.right-lane');
+            if(!leftZone || !rightZone || !battleStage || !leftLane || !rightLane) return;
+
+            if(window.innerWidth <= 700) {
+                leftZone.style.left = '';
+                leftZone.style.right = '';
+                rightZone.style.left = '';
+                rightZone.style.right = '';
+                return;
+            }
+
+            const stageRect = battleStage.getBoundingClientRect();
+            const leftLaneRect = leftLane.getBoundingClientRect();
+            const rightLaneRect = rightLane.getBoundingClientRect();
+            const gapOffset = window.innerHeight <= 720 ? 8 : 10;
+            const leftWidth = leftZone.offsetWidth || 170;
+            const rightWidth = rightZone.offsetWidth || 170;
+            const leftLaneRight = leftLaneRect.right - stageRect.left;
+            const rightLaneLeft = rightLaneRect.left - stageRect.left;
+
+            leftZone.style.right = 'auto';
+            leftZone.style.left = `${Math.max(0, leftLaneRight - leftWidth - gapOffset)}px`;
+            rightZone.style.right = 'auto';
+            rightZone.style.left = `${Math.max(0, rightLaneLeft + gapOffset)}px`;
+        }
+
+        function getCurrentBattleLevelData() {
+            return levelsInfo[currentLevelIndex] || levelsInfo[0];
+        }
+
+        function getLevelPower() {
+            return currentLevelIndex + 1;
+        }
+
+        function getEnemyCap() {
+            return Math.min(20, 8 + (getLevelPower() - 1) * 2);
+        }
+
+        function getSpawnCountPerSide() {
+            return Math.min(4, getLevelPower());
+        }
+
+        function getProjectileCap() {
+            return Math.min(26, 12 + getLevelPower() * 2);
+        }
+
+        function getEffectCap() {
+            return Math.min(24, 12 + getLevelPower() * 2);
+        }
+
+        function getCenterThreatBoundary(side) {
+            const metrics = getLaneMetrics(side);
+            return side === 'left' ? metrics.width : 0;
+        }
+
+        function getEnemyCollisionRadius(enemy) {
+            return 12 + (enemy && enemy.size ? enemy.size * 10 : 10);
+        }
+
+        function initBattleState() {
+            const levelData = getCurrentBattleLevelData();
+            battleState = {
+                leftEnemies: [],
+                rightEnemies: [],
+                projectiles: [],
+                effects: [],
+                lastSpawnTime: 0,
+                lastBeastAttackTime: 0,
+                lastHeroAttackTime: 0,
+                spawnInterval: levelData.spawnInterval,
+                attackInterval: levelData.attackInterval,
+                enemyIdSeed: 1,
+                projectileIdSeed: 1,
+                effectIdSeed: 1,
+                battlePaused: false,
+                shieldUntil: 0,
+                bossRush: false,
+                challengeRushUntil: 0,
+                challengeRushMultiplier: 1,
+                lastEnemyStamp: '',
+                lastProjectileStamp: '',
+                lastEffectStamp: ''
+            };
+        }
+
+        function clearBattleState() {
+            if(battleLoop) {
+                clearInterval(battleLoop);
+                battleLoop = null;
+            }
+            if(battleEffectTimeoutId) {
+                clearTimeout(battleEffectTimeoutId);
+                battleEffectTimeoutId = null;
+            }
+            Object.keys(roleAnimationTimers).forEach(key => {
+                if(roleAnimationTimers[key]) {
+                    clearTimeout(roleAnimationTimers[key]);
+                    roleAnimationTimers[key] = null;
+                }
+            });
+            if(!battleState) {
+                document.getElementById('left-monsters').innerHTML = '';
+                document.getElementById('right-monsters').innerHTML = '';
+                document.getElementById('projectile-layer').innerHTML = '';
+                document.getElementById('effect-layer').innerHTML = '';
+                return;
+            }
+            battleState.leftEnemies = [];
+            battleState.rightEnemies = [];
+            battleState.projectiles = [];
+            battleState.effects = [];
+            battleState.lastEnemyStamp = '';
+            battleState.lastProjectileStamp = '';
+            battleState.lastEffectStamp = '';
+            document.getElementById('left-monsters').innerHTML = '';
+            document.getElementById('right-monsters').innerHTML = '';
+            document.getElementById('projectile-layer').innerHTML = '';
+            document.getElementById('effect-layer').innerHTML = '';
+        }
+
+        function clampBattleCollections() {
+            if(!battleState) return;
+            battleState.projectiles = battleState.projectiles.slice(-getProjectileCap());
+            battleState.effects = battleState.effects.slice(-getEffectCap());
+            battleState.leftEnemies = battleState.leftEnemies.slice(-getEnemyCap());
+            battleState.rightEnemies = battleState.rightEnemies.slice(-getEnemyCap());
+        }
+
+        function createBattleEffect({ emoji = 'effect-spark', text = '', x = 50, y = 50, type = 'hit', duration = 700 }) {
+            if(!battleState) return;
+            battleState.effects.push({
+                id: battleState.effectIdSeed++,
+                emoji,
+                text,
+                x,
+                y,
+                type,
+                createdAt: Date.now(),
+                duration
+            });
+            clampBattleCollections();
+        }
+
+        function animateRole(role, action, duration = 360) {
+            const id = role === 'hero' ? 'hero-emoji' : 'monster-emoji';
+            const el = document.getElementById(id);
+            if(!el) return;
+            const baseClass = role === 'hero' ? 'fighter hero idle-hero' : 'fighter beast idle-beast';
+            el.className = `${baseClass} ${action}`;
+            if(state.isSealed) el.classList.add('sealed-boost');
+            if(roleAnimationTimers[role]) clearTimeout(roleAnimationTimers[role]);
+            roleAnimationTimers[role] = setTimeout(() => {
+                el.className = baseClass;
+                if(state.isSealed) el.classList.add('sealed-boost');
+                roleAnimationTimers[role] = null;
+            }, duration);
+        }
+
+        function getNoiseMode(vol) {
+            const level = currentLevelIndex + 1;
+            const highOffset = level === 1 ? 6 : Math.max(1, 3 - Math.floor((level - 2) / 2));
+            const criticalOffset = level === 1 ? 18 : Math.max(5, 9 - (level - 2));
+            if(vol > config.threshold + criticalOffset) return 'critical';
+            if(vol > config.threshold + highOffset) return 'high';
+            return 'normal';
+        }
+
+        function getAttackInterval(vol) {
+            const levelData = getCurrentBattleLevelData();
+            let interval = levelData.attackInterval;
+            const noiseMode = getNoiseMode(vol);
+            if(noiseMode === 'high') interval += 420;
+            if(noiseMode === 'critical') interval += 999999;
+            if(state.isSealed) interval = Math.max(480, interval * 0.65);
+            return interval;
+        }
+
+        function computeChallengeRushMultiplier(durationMs) {
+            const levelData = getCurrentBattleLevelData();
+            const baseSpeed = 20 + levelData.id * 4;
+            const targetSeconds = Math.max(2, durationMs / 1000);
+            const left = getLaneMetrics('left');
+            const right = getLaneMetrics('right');
+            const leftDistance = Math.max(80, left.width - 10);
+            const rightDistance = Math.max(80, right.width - 10);
+            const neededSpeed = Math.max(leftDistance, rightDistance) / targetSeconds;
+            return Math.max(1, Math.min(3.6, neededSpeed / baseSpeed));
+        }
+
+        function startChallengeRush(durationMs) {
+            if(!battleState) return;
+            battleState.challengeRushUntil = Date.now() + durationMs;
+            battleState.challengeRushMultiplier = computeChallengeRushMultiplier(durationMs);
+            battleState.lastSpawnTime = 0;
+        }
+
+        function clearChallengeRush() {
+            if(!battleState) return;
+            battleState.challengeRushUntil = 0;
+            battleState.challengeRushMultiplier = 1;
+        }
+
+        function getEnemySpeed(levelData, vol) {
+            let speed = 20 + levelData.id * 4;
+            if(vol > config.threshold) {
+                speed *= 1 + Math.min((vol - config.threshold) / 35, 0.7);
+            }
+            if(battleState && Date.now() < battleState.challengeRushUntil) {
+                speed *= battleState.challengeRushMultiplier || 1;
+            }
+            if(state.isSealed) speed *= 0;
+            return speed;
+        }
+
+        function getProjectileStart(side) {
+            const battleStage = document.getElementById('battle-stage');
+            const battleRect = battleStage.getBoundingClientRect();
+            const fighter = document.getElementById(side === 'left' ? 'monster-emoji' : 'hero-emoji');
+            const rect = fighter.getBoundingClientRect();
+            return {
+                x: rect.left - battleRect.left + rect.width / 2,
+                y: rect.top - battleRect.top + rect.height * 0.55
+            };
+        }
+
+        function getLaneWorldPos(side, laneX, laneY) {
+            const metrics = getLaneMetrics(side);
+            return {
+                x: metrics.x + laneX,
+                y: metrics.y + laneY
+            };
+        }
+
+        function spawnEnemy(side, options = {}) {
+            if(!battleState || !state.isPlaying) return null;
+            const levelData = getCurrentBattleLevelData();
+            const pool = side === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
+            if(pool.length >= getEnemyCap()) return null;
+
+            const metrics = getLaneMetrics(side);
+            if(metrics.width <= 0 || metrics.height <= 0) return null;
+
+            const lanePadding = 12;
+            const y = options.y ?? Math.max(30, Math.min(metrics.height - 22, 34 + Math.random() * Math.max(30, metrics.height - 68)));
+            const spawnX = options.x ?? (side === 'left' ? -18 : metrics.width + 18);
+            const enemy = {
+                id: battleState.enemyIdSeed++,
+                side,
+                emoji: levelData.monsters[Math.floor(Math.random() * levelData.monsters.length)],
+                x: spawnX,
+                y,
+                speed: getEnemySpeed(levelData, 0),
+                hp: 1,
+                size: 1 + Math.random() * 0.22,
+                alive: true,
+                driftSeed: Math.random() * Math.PI * 2,
+                spawnedAt: Date.now(),
+                breached: false,
+                lanePadding
+            };
+            pool.push(enemy);
+            return enemy;
+        }
+
+        function spawnBossRushWave() {
+            if(!battleState || !bossState.active) return;
+            ['left', 'right'].forEach(side => {
+                const metrics = getLaneMetrics(side);
+                const pool = side === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
+                const room = Math.max(0, getEnemyCap() - pool.length);
+                const count = Math.min(getSpawnCountPerSide(), Math.max(0, room));
+                for(let i = 0; i < count; i++) {
+                    const x = side === 'left'
+                        ? Math.min(metrics.width - 50, 22 + i * 34)
+                        : Math.max(50, metrics.width - 22 - i * 34);
+                    const y = Math.max(28, Math.min(metrics.height - 24, 32 + i * Math.max(30, metrics.height / (count + 1))));
+                    spawnEnemy(side, { x, y, force: true });
+                }
+            });
+        }
+
+        function removeEnemyById(side, enemyId) {
+            if(!battleState) return null;
+            const list = side === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
+            const idx = list.findIndex(enemy => enemy.id === enemyId);
+            if(idx === -1) return null;
+            const enemy = list[idx];
+            list.splice(idx, 1);
+            return enemy;
+        }
+
+        function getAttackTargets(side, count = 1, excludedIds = new Set()) {
+            if(!battleState) return [];
+            const metrics = getLaneMetrics(side);
+            const list = side === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
+            if(!list.length) return [];
+            const candidates = list
+                .filter(enemy => !excludedIds.has(enemy.id))
+                .filter(enemy => {
+                    const radius = getEnemyCollisionRadius(enemy);
+                    return side === 'left'
+                        ? enemy.x - radius >= 0
+                        : enemy.x + radius <= metrics.width;
+                })
+                .sort((a, b) => {
+                    if(side === 'left') return b.x - a.x || Math.abs(a.y - metrics.height / 2) - Math.abs(b.y - metrics.height / 2);
+                    return a.x - b.x || Math.abs(a.y - metrics.height / 2) - Math.abs(b.y - metrics.height / 2);
+                });
+            return candidates.slice(0, count);
+        }
+
+        function findNearestEnemy(side) {
+            return getAttackTargets(side, 1)[0] || null;
+        }
+
+        function spawnProjectile(side, targetEnemy, type = 'auto') {
+            if(!battleState || !targetEnemy) return;
+            if(battleState.projectiles.length >= getProjectileCap()) return;
+            const levelData = getCurrentBattleLevelData();
+            const start = getProjectileStart(side);
+            const target = getLaneWorldPos(targetEnemy.side, targetEnemy.x, targetEnemy.y);
+            const dx = target.x - start.x;
+            const dy = target.y - start.y;
+            const dist = Math.max(1, Math.hypot(dx, dy));
+            const speed = type === 'ultimate' ? 720 : type === 'answer' ? 580 : 520;
+            battleState.projectiles.push({
+                id: battleState.projectileIdSeed++,
+                side,
+                emoji: side === 'left' ? levelData.beastProjectile : levelData.heroProjectile,
+                x: start.x,
+                y: start.y,
+                vx: (dx / dist) * speed,
+                vy: (dy / dist) * speed,
+                targetEnemyId: targetEnemy.id,
+                retargeted: false,
+                type,
+                createdAt: Date.now()
+            });
+        }
+
+        function applyBattleHit(side, enemy, sourceType = 'auto') {
+            if(!enemy) return;
+            const removed = removeEnemyById(side, enemy.id);
+            if(!removed) return;
+            const world = getLaneWorldPos(side, removed.x, removed.y);
+            const burstEmoji = sourceType === 'ultimate' ? 'effect-burst' : sourceType === 'answer' ? 'effect-answer' : (side === 'left' ? 'effect-spark' : 'proj-fire');
+            createBattleEffect({
+                emoji: burstEmoji,
+                text: '',
+                x: world.x,
+                y: world.y,
+                type: sourceType,
+                duration: 420
+            });
+            if(sourceType === 'ultimate') {
+                setBattleBanner('合体技释放！怪潮被击退！', '');
+            } else if(sourceType === 'answer') {
+                setBattleBanner('答题成功！守护技能释放！', '');
+            }
+        }
+
+        function applyBattlePressure(vol, deltaMs) {
+            if(!battleState) return;
+            const levelData = getCurrentBattleLevelData();
+            battleState.spawnInterval = battleState.bossRush ? levelData.bossRushSpawnInterval : levelData.spawnInterval;
+            if(vol > config.threshold + 6) battleState.spawnInterval = Math.max(520, battleState.spawnInterval - 260);
+        }
+
+        function updateEnemies(deltaMs, vol) {
+            if(!battleState) return;
+            const levelData = getCurrentBattleLevelData();
+            const enemySpeed = getEnemySpeed(levelData, vol);
+            const now = Date.now();
+            ['left', 'right'].forEach(side => {
+                const list = side === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
+                const metrics = getLaneMetrics(side);
+                const threatBoundary = getCenterThreatBoundary(side);
+                for(let i = list.length - 1; i >= 0; i--) {
+                    const enemy = list[i];
+                    if(!enemy.alive) {
+                        list.splice(i, 1);
+                        continue;
+                    }
+                    enemy.speed = enemySpeed * (0.9 + (enemy.size - 1) * 0.45);
+                    const drift = Math.sin((now - enemy.spawnedAt) / 260 + enemy.driftSeed) * 0.28;
+                    enemy.y = Math.max(24, Math.min(metrics.height - 20, enemy.y + drift));
+                    if(!state.isSealed) {
+                        const move = enemy.speed * (deltaMs / 1000);
+                        enemy.x += side === 'left' ? move : -move;
+                    }
+                    const enemyRadius = getEnemyCollisionRadius(enemy);
+                    const touchedBoundary = side === 'left'
+                        ? enemy.x + enemyRadius >= threatBoundary
+                        : enemy.x - enemyRadius <= threatBoundary;
+                    if(touchedBoundary && !enemy.breached) {
+                        enemy.breached = true;
+                        list.splice(i, 1);
+                        createBattleEffect({
+                            emoji: 'effect-alert',
+                            text: '突破防线',
+                            x: getLaneWorldPos(side, enemy.x, enemy.y).x,
+                            y: getLaneWorldPos(side, enemy.x, enemy.y).y,
+                            type: 'breach',
+                            duration: 900
+                        });
+                        if(addDangerBlock('enemy breached center')) return;
+                        setBattleBanner('怪潮逼近中央防线！', 'warning');
+                    }
+                }
+            });
+        }
+
+        function autoAttack(now, vol) {
+            if(!battleState || state.challengeResolving) return;
+            const attackInterval = getAttackInterval(vol);
+            const noiseMode = getNoiseMode(vol);
+            if(noiseMode === 'critical') {
+                setBattleBanner('声音太吵，守护力下降！', 'warning');
+                document.getElementById('hero-emoji').classList.add('danger');
+                document.getElementById('monster-emoji').classList.add('danger');
+                return;
+            }
+            document.getElementById('hero-emoji').classList.remove('danger');
+            document.getElementById('monster-emoji').classList.remove('danger');
+
+            const attackCount = getLevelPower();
+            if(now - battleState.lastBeastAttackTime >= attackInterval) {
+                const leftTargets = getAttackTargets('left', attackCount);
+                if(leftTargets.length) {
+                    battleState.lastBeastAttackTime = now;
+                    animateRole('beast', 'attacking beast');
+                    leftTargets.forEach(target => spawnProjectile('left', target, 'auto'));
+                }
+            }
+
+            if(now - battleState.lastHeroAttackTime >= attackInterval) {
+                const rightTargets = getAttackTargets('right', attackCount);
+                if(rightTargets.length) {
+                    battleState.lastHeroAttackTime = now;
+                    animateRole('hero', 'attacking hero');
+                    rightTargets.forEach(target => spawnProjectile('right', target, 'auto'));
+                }
+            }
+        }
+
+        function updateProjectiles(deltaMs) {
+            if(!battleState) return;
+            const battleStage = document.getElementById('battle-stage');
+            const rect = battleStage.getBoundingClientRect();
+            for(let i = battleState.projectiles.length - 1; i >= 0; i--) {
+                const projectile = battleState.projectiles[i];
+                projectile.x += projectile.vx * (deltaMs / 1000);
+                projectile.y += projectile.vy * (deltaMs / 1000);
+                const targetSide = projectile.side === 'left' ? 'left' : 'right';
+                const targetList = targetSide === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
+                let target = targetList.find(enemy => enemy.id === projectile.targetEnemyId);
+                if(!target && !projectile.retargeted && projectile.type === 'auto') {
+                    target = findNearestEnemy(targetSide);
+                    if(target) {
+                        const world = getLaneWorldPos(targetSide, target.x, target.y);
+                        const dx = world.x - projectile.x;
+                        const dy = world.y - projectile.y;
+                        const dist = Math.max(1, Math.hypot(dx, dy));
+                        const speed = Math.max(420, Math.hypot(projectile.vx, projectile.vy));
+                        projectile.vx = (dx / dist) * speed;
+                        projectile.vy = (dy / dist) * speed;
+                        projectile.targetEnemyId = target.id;
+                    }
+                    projectile.retargeted = true;
+                }
+                if(target) {
+                    const world = getLaneWorldPos(targetSide, target.x, target.y);
+                    const hitRadius = 20 + (target.size || 1) * 8;
+                    if(Math.hypot(projectile.x - world.x, projectile.y - world.y) < hitRadius) {
+                        applyBattleHit(targetSide, target, projectile.type);
+                        battleState.projectiles.splice(i, 1);
+                        continue;
+                    }
+                }
+                if(projectile.x < -30 || projectile.x > rect.width + 30 || projectile.y < -30 || projectile.y > rect.height + 30) {
+                    battleState.projectiles.splice(i, 1);
+                }
+            }
+        }
+
+        function updateEffects(now) {
+            if(!battleState) return;
+            battleState.effects = battleState.effects.filter(effect => now - effect.createdAt <= effect.duration);
+        }
+
+        function clearEnemiesBatch(side, count, sourceType = 'answer') {
+            if(!battleState) return 0;
+            const list = side === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
+            const sorted = list.slice().sort((a, b) => side === 'left' ? b.x - a.x : a.x - b.x);
+            const targets = sorted.slice(0, count);
+            targets.forEach(enemy => {
+                spawnProjectile(side, enemy, sourceType);
+            });
+            return targets.length;
+        }
+
+        function triggerAnswerSkill() {
+            if(!battleState) return;
+            const levelData = getCurrentBattleLevelData();
+            animateRole('hero', 'casting');
+            animateRole('beast', 'casting');
+            showBattleEffect([heroInfo.emoji, '+', levelData.beastEmoji], 950);
+            setBattleBanner('答题成功！守护技能释放！', '');
+            createBattleEffect({
+                emoji: 'effect-answer',
+                text: '',
+                x: document.getElementById('battle-stage').getBoundingClientRect().width / 2,
+                y: 58,
+                type: 'answer-banner',
+                duration: 500
+            });
+            clearEnemiesBatch('left', battleState.leftEnemies.length, 'answer');
+            clearEnemiesBatch('right', battleState.rightEnemies.length, 'answer');
+        }
+
+        function triggerComboUltimate() {
+            if(!battleState) return;
+            const levelData = getCurrentBattleLevelData();
+            animateRole('hero', 'casting', 700);
+            animateRole('beast', 'casting', 700);
+            showBattleEffect(levelData.ultimateEffect, 1200);
+            setBattleBanner('合体技释放！怪潮被击退！', '');
+            const leftCount = Math.ceil(battleState.leftEnemies.length * (currentLevelIndex === 6 ? 1 : 0.85));
+            const rightCount = Math.ceil(battleState.rightEnemies.length * (currentLevelIndex === 6 ? 1 : 0.85));
+            clearEnemiesBatch('left', Math.max(leftCount, levelData.answerSkillCount + 1), 'ultimate');
+            clearEnemiesBatch('right', Math.max(rightCount, levelData.answerSkillCount + 1), 'ultimate');
+        }
+
+        function renderEnemies(side, containerId) {
+            if(!battleState) return '';
+            const list = side === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
+            return list.map(enemy => {
+                const classes = ['enemy'];
+                if(state.isSealed) classes.push('sealed');
+                const style = [
+                    `left:${enemy.x}px`,
+                    `top:${enemy.y}px`,
+                    `transform:translate(-50%, -50%) scale(${enemy.size.toFixed(2)})`
+                ].join(';');
+                return `<span class="${classes.join(' ')}" style="${style}">${renderVisualValue(enemy.emoji)}</span>`;
+            }).join('');
+        }
+
+        function renderProjectiles() {
+            if(!battleState) return '';
+            return battleState.projectiles.map(projectile => {
+                const cls = `projectile ${projectile.side === 'left' ? 'beast' : 'hero'}`;
+                return `<span class="${cls}" style="left:${projectile.x}px;top:${projectile.y}px;">${renderVisualValue(projectile.emoji)}</span>`;
+            }).join('');
+        }
+
+        function renderEffects() {
+            if(!battleState) return '';
+            return battleState.effects.map(effect => {
+                const iconHtml = renderVisualValue(effect.emoji);
+                const textHtml = effect.text ? `<span>${escapeHtml(effect.text)}</span>` : '';
+                return `<span class="battle-effect-item" style="left:${effect.x}px;top:${effect.y}px;">${iconHtml}${textHtml}</span>`;
+            }).join('');
+        }
+
+        function renderBattlefield() {
+            if(!battleState) return;
+            const leftHtml = renderEnemies('left', 'left-monsters');
+            const rightHtml = renderEnemies('right', 'right-monsters');
+            const projectileHtml = renderProjectiles();
+            const effectHtml = renderEffects();
+            const enemyStamp = `${leftHtml}||${rightHtml}`;
+            if(enemyStamp !== battleState.lastEnemyStamp) {
+                document.getElementById('left-monsters').innerHTML = leftHtml;
+                document.getElementById('right-monsters').innerHTML = rightHtml;
+                battleState.lastEnemyStamp = enemyStamp;
+            }
+            if(projectileHtml !== battleState.lastProjectileStamp) {
+                document.getElementById('projectile-layer').innerHTML = projectileHtml;
+                battleState.lastProjectileStamp = projectileHtml;
+            }
+            if(effectHtml !== battleState.lastEffectStamp) {
+                document.getElementById('effect-layer').innerHTML = effectHtml;
+                battleState.lastEffectStamp = effectHtml;
+            }
+        }
+
+        function updateBattle(deltaMs, vol) {
+            if(!battleState || !state.isPlaying || state.isPaused) return;
+            const now = Date.now();
+            applyBattlePressure(vol, deltaMs);
+            if(now - battleState.lastSpawnTime >= battleState.spawnInterval) {
+                battleState.lastSpawnTime = now;
+                const spawnCount = getSpawnCountPerSide();
+                for(let i = 0; i < spawnCount; i++) {
+                    spawnEnemy('left');
+                    spawnEnemy('right');
+                }
+            }
+            updateEnemies(deltaMs, vol);
+            autoAttack(now, vol);
+            updateProjectiles(deltaMs);
+            updateEffects(now);
+            clampBattleCollections();
+            renderBattlefield();
+        }
+
+        function startBattleLoop() {
+            if(battleLoop) clearInterval(battleLoop);
+            lastBattleFrameTime = Date.now();
+            battleLoop = setInterval(() => {
+                if(!state.isPlaying || state.isPaused || !battleState) return;
+                const now = Date.now();
+                const deltaMs = Math.min(50, Math.max(16, now - lastBattleFrameTime || 33));
+                lastBattleFrameTime = now;
+                let vol = 0;
+                try {
+                    vol = audio.analyser && audio.data ? getVolume() : 0;
+                } catch (err) {
+                    vol = 0;
+                }
+                updateBattle(deltaMs, vol);
+            }, 33);
+        }
+
+        function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); document.getElementById('game-nav').style.display = (id === 'game-screen') ? 'flex' : 'none'; }
+        
+        function updateSetUI() {
+            document.getElementById('set-time-val').innerText = document.getElementById('input-time').value;
+            document.getElementById('set-line-val').innerText = document.getElementById('input-line').value;
+            document.getElementById('set-read-line-val').innerText = document.getElementById('input-read-line').value;
+            config.testMode = document.getElementById('input-test-mode').checked;
+        }
+
+        function openSettings() {
+            state.isPaused = true; SynthBGM.stop(); 
+            document.getElementById('input-time').value = config.duration;
+            document.getElementById('input-line').value = config.threshold;
+            document.getElementById('input-read-line').value = config.readThreshold;
+            document.getElementById('input-test-mode').checked = config.testMode;
+            updateSetUI();
+            document.getElementById('settings-modal').style.display = 'flex';
+        }
+
+        function closeSettings() {
+            config.duration = parseInt(document.getElementById('input-time').value);
+            config.threshold = parseInt(document.getElementById('input-line').value);
+            config.readThreshold = parseInt(document.getElementById('input-read-line').value);
+            config.testMode = document.getElementById('input-test-mode').checked;
+            document.getElementById('red-line').style.left = config.threshold + '%';
+            document.getElementById('settings-modal').style.display = 'none';
+            state.isPaused = false; if(state.isPlaying) SynthBGM.start(); 
+        }
+
+        function skipLevelTest() { closeSettings(); endGame(true); }
+        function togglePause() { state.isPaused = !state.isPaused; document.getElementById('pause-btn').innerText = state.isPaused ? "继续" : "暂停"; state.isPaused ? SynthBGM.stop() : SynthBGM.start(); }
+        function restartLevel() {
+            clearInterval(timerLoop);
+            if(battleLoop) clearInterval(battleLoop);
+            clearChallengeTimers();
+            clearBossRelayTimers();
+            clearChallengeRush();
+            clearBattleState();
+            resetBossRelayPanelFit();
+            SynthBGM.setBossMode(false);
+            startGame(currentLevelIndex);
+        }
+
+        function updateDangerUI() {
+            for(let i = 1; i <= MAX_DANGER; i++) {
+                let block = document.getElementById(`d-${i}`);
+                if(!block) continue;
+                if(i <= state.dangerLevel) block.classList.add('active'); else block.classList.remove('active');
+            }
+            document.getElementById('noise-acc-fill').style.width = state.noiseAcc + '%';
+        }
+
+        function clearAllDanger() {
+            state.dangerLevel = 0;
+            state.noiseAcc = 0;
+            updateDangerUI();
+
+            const noiseFill = document.getElementById('noise-acc-fill');
+            if (noiseFill) noiseFill.style.width = '0%';
+        }
+
+        async function startGame(levelIndex) {
+            SFX.init();
+            currentLevelIndex = levelIndex;
+            const levelData = levelsInfo[currentLevelIndex];
+            document.body.className = `bg-level-${levelData.id}`; 
+
+            config.duration = levelData.duration;
+            config.threshold = levelData.threshold;
+            config.dangerSpeed = levelData.speed;
+            config.readSpeed = 8;
+
+            state.challengeTimes = []; 
+            bags = { 'vocab':[], 'sents':[], 'typeBag':[] };
+            groupBag = [];
+            groupBag = [];
+            lastTypePoolKey = '';
+
+            let safeDuration = config.duration;
+            let interval = safeDuration / (levelData.questions + 1);
+            for(let i=1; i<=levelData.questions; i++) state.challengeTimes.push(interval * i);
+
+            document.getElementById('side-alert-left').style.display = 'none'; document.getElementById('side-alert-right').style.display = 'none';
+            document.getElementById('boss-container').style.display = 'none';
+            resetBossRelayPanelFit();
+
+            try {
+                if(!audio.ctx) {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const source = audio.ctx.createMediaStreamSource(stream);
+                    audio.analyser = audio.ctx.createAnalyser();
+                    audio.analyser.fftSize = 256;
+                    source.connect(audio.analyser);
+                    audio.data = new Uint8Array(audio.analyser.frequencyBinCount);
+                }
+                
+                state.isPlaying = true; state.isPaused = false; state.timeElapsed = 0; 
+                state.dangerLevel = 0; state.noiseAcc = 0; state.consecutiveCorrect = 0;
+                clearChallengeTimers();
+                clearBossRelayTimers();
+                initBattleState();
+                state.isSealed = false; state.sealTimer = 0; state.challengeActive = false; state.challengeResolving = false;
+                state.bossCleared = false; bossState.active = false; bossState.step = 0; bossState.currentTask = null; bossState.resolving = false; bossState.relayResolving = false;
+                SynthBGM.setBossMode(false);
+                
+                document.getElementById('level-badge').innerText = `第 ${levelData.id} 关 · ${levelData.themeName}`;
+                document.getElementById('evolve-fill').style.width = '0%';
+                document.getElementById('red-line').style.left = config.threshold + '%';
+                refreshBattleUI();
+                document.getElementById('challenge-box').style.display = 'none';
+                document.getElementById('monster').classList.remove('has-question');
+                document.getElementById('challenge-group-chip').innerText = '';
+                document.getElementById('challenge-subj-chip').innerText = '';
+                document.getElementById('challenge-group-callout').style.display = 'none';
+                document.getElementById('status-msg').innerText = getLevelStatusText();
+                document.getElementById('status-msg').style.color = "white";
+                updateComboUI();
+                document.getElementById('pause-btn').innerText = '暂停';
+                
+                document.getElementById('seal-text').style.display = 'none';
+                document.body.classList.remove('sealed-bg');
+                document.getElementById('seal-overlay').style.display = 'none';
+                updateDangerUI();
+                renderBattlefield();
+                
+                showScreen('game-screen');
+                requestAnimationFrame(positionFighterZones);
+                SynthBGM.start(); 
+                startBattleLoop();
+                gameLoop();
+            } catch (e) { 
+                alert("麦克风启动失败！请允许权限后重试。"); 
+            }
+        }
+
+        function triggerSeal() {
+            clearAllDanger();
+            SFX.seal(); state.isSealed = true; state.sealTimer = 100; // 10秒
+            if(battleState) battleState.shieldUntil = Date.now() + 10000;
+            if(bossState.active) bossState.deadline += 10000;
+            state.consecutiveCorrect = 0; updateComboUI();
+            document.getElementById('seal-text').style.display = 'block';
+            document.getElementById('seal-text').innerText = `梦境结界展开！小怪暂停 ${Math.ceil(state.sealTimer/10)} 秒！`;
+            document.getElementById('battle-stage').classList.add('sealed');
+            document.getElementById('hero-emoji').classList.add('sealed-boost');
+            document.getElementById('monster-emoji').classList.add('sealed-boost');
+            setBattleBanner('梦境结界展开！小怪暂停 10 秒！', 'seal');
+            showBattleEffect(['effect-spark', 'effect-shield', 'effect-spark'], 1000);
+            document.body.classList.add('sealed-bg'); document.getElementById('seal-overlay').style.display = 'block';
+        }
+
+        function endSeal() {
+            state.isSealed = false; document.getElementById('seal-text').style.display = 'none';
+            document.getElementById('battle-stage').classList.remove('sealed');
+            document.getElementById('hero-emoji').classList.remove('sealed-boost');
+            document.getElementById('monster-emoji').classList.remove('sealed-boost');
+            refreshBattleUI();
+            document.body.classList.remove('sealed-bg'); document.getElementById('seal-overlay').style.display = 'none';
+        }
+
+        function getVolume() {
+            audio.analyser.getByteFrequencyData(audio.data);
+            let sum = 0; for(let i=0; i<audio.data.length; i++) sum += audio.data[i];
+            return (sum / audio.data.length / 120) * 100;
+        }
+
+        function isTaskVolumeMode() {
+            return bossState.active ||
+                (state.challengeActive && state.currentChall &&
+                ['read', 'class-read', 'bomb-defuse'].includes(state.currentChall.mode));
+        }
+
+        function addDangerBlock(reason = '') {
+            state.dangerLevel += 1;
+            state.noiseAcc = 0;
+            updateDangerUI();
+            SFX.tick();
+
+            if(state.dangerLevel >= MAX_DANGER) {
+                endGame(false);
+                return true;
+            }
+            return false;
+        }
+
+        function applyNoiseDanger(vol) {
+            const levelData = levelsInfo[currentLevelIndex];
+            const noiseMode = getNoiseMode(vol);
+
+            if(vol > config.threshold) {
+                let dangerGain = config.dangerSpeed;
+                if(noiseMode === 'high') dangerGain *= 1.35;
+                if(noiseMode === 'critical') dangerGain *= 1.85;
+                state.noiseAcc += dangerGain;
+                document.getElementById('battle-stage').classList.add('noisy');
+                setBattleBanner('噪音小怪变强了！快安静下来！', 'warning');
+
+                if(state.noiseAcc >= 100) {
+                    state.dangerLevel += 1;
+                    state.noiseAcc = 0;
+                    SFX.tick();
+                    updateDangerUI();
+                    if(state.dangerLevel >= MAX_DANGER) {
+                        endGame(false);
+                        return true;
+                    }
+                }
+            } else {
+                state.noiseAcc = Math.max(0, state.noiseAcc - 0.5);
+                document.getElementById('battle-stage').classList.remove('noisy');
+                setBattleBanner(levelData.skillText || '神兽守左路，守护者守右路', '');
+            }
+
+            updateDangerUI();
+            return false;
+        }
+
+        function applyReadingProgress(vol, options = {}) {
+            const {
+                progressOwner = state,
+                fillId = 'reading-fill',
+                successCallback,
+                failCallback,
+                timeLeft = 0,
+                threshold = config.readThreshold,
+                speed = config.readSpeed,
+                decay = 5
+            } = options;
+
+            if(vol > threshold) {
+                progressOwner.readingProgress += speed;
+            } else {
+                progressOwner.readingProgress -= decay;
+            }
+
+            progressOwner.readingProgress = Math.max(0, Math.min(100, progressOwner.readingProgress));
+
+            const fill = document.getElementById(fillId);
+            if(fill) fill.style.width = progressOwner.readingProgress + '%';
+
+            if(progressOwner.readingProgress >= 100) {
+                if(successCallback) successCallback();
+                return true;
+            }
+
+            if(timeLeft <= 0) {
+                if(failCallback) failCallback();
+                return true;
+            }
+
+            return false;
+        }
+
+        // ================= BOSS阶段核心逻辑 =================
+        function startBossPhase() {
+            clearChallengeTimers();
+            clearBossRelayTimers();
+            resetChallengePanelFit();
+            bossState.active = true;
+            bossState.step = 0;
+            bossState.readingProgress = 0;
+            bossState.currentTask = null;
+            bossState.resolving = false;
+            bossState.relayResolving = false;
+            state.challengeActive = false; document.getElementById('challenge-box').style.display = 'none';
+            document.getElementById('challenge-test-pass').style.display = 'none';
+            document.getElementById('side-alert-left').style.display = 'none'; document.getElementById('side-alert-right').style.display = 'none';
+            
+            document.getElementById('boss-container').style.display = 'flex';
+            document.querySelector('.boss-glitch-text').innerText = '一大波怪物正在袭来！';
+            document.getElementById('boss-type1-ui').style.display = 'none';
+            document.getElementById('boss-type2-ui').style.display = 'none';
+            resetBossRelayPanelFit();
+            document.getElementById('boss-test-pass').style.display = 'none';
+            document.getElementById('boss-relay-title').innerText = getBossTitle();
+            document.getElementById('boss-relay-progress').innerText = `${getBossPowerName()}：0 / 8`;
+            document.getElementById('boss-timer').innerText = '剩余：10s';
+            document.getElementById('boss-relay-group').innerText = getBossGroupPrompt(0, null);
+            document.getElementById('boss-relay-kind').innerText = '准备迎接挑战';
+            if(battleState) {
+                battleState.bossRush = true;
+                battleState.spawnInterval = getCurrentBattleLevelData().bossRushSpawnInterval;
+            }
+            setBattleBanner('一大波怪物正在袭来！完成挑战释放合体技！', 'warning');
+
+            SynthBGM.setBossMode(true); // 切换接力BGM
+            SFX.dragonRoar(); // 咆哮音效
+
+            bossFeedbackTimerId = setTimeout(() => {
+                bossFeedbackTimerId = null;
+                triggerBossRelayQuestion();
+            }, 250);
+        }
+
+        function generateBossRelayTask() {
+            let types = getBossRelayTypePool();
+            let type = types[Math.floor(Math.random() * types.length)];
+
+            if(type === 'read') {
+                return { mode: 'read', kind: '英语朗读', text: getShuffledItem('sents', getActiveSents()), deadlineMs: 10000 };
+            }
+            // en-task
+            let activeVocab = getActiveVocab();
+            let raw = getShuffledItem('vocab', activeVocab);
+            let parts = raw.match(/(.+)\((.+)\)/);
+            let word = parts ? parts[1] : raw;
+            let ans = parts ? parts[2] : raw;
+            let wrongs = activeVocab
+                .map(item => {
+                    let match = item.match(/.+\((.+)\)/);
+                    return match ? match[1] : item;
+                })
+                .filter(item => item !== ans)
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 2);
+            while (wrongs.length < 2) wrongs.push(wrongs.length === 0 ? '✗' : '✗✗');
+            return { mode: 'task', kind: '英语翻译', text: word, ans, opts: [ans, ...wrongs].sort(() => Math.random() - 0.5), deadlineMs: 15000 };
+        }
+
+        function resetBossRelayPanelFit() {
+            const panel = document.getElementById('boss-type1-ui');
+            if(!panel) return;
+            panel.classList.remove('boss-fit-compact', 'boss-fit-tight');
+            panel.style.maxHeight = '';
+        }
+
+        function fitBossRelayPanel() {
+            const panel = document.getElementById('boss-type1-ui');
+            const container = document.getElementById('boss-container');
+            if(!panel || !container || bossState.active !== true || panel.style.display === 'none') return;
+
+            panel.classList.remove('boss-fit-compact', 'boss-fit-tight');
+            panel.style.maxHeight = '';
+
+            const availableHeight = Math.max(220, container.clientHeight - panel.offsetTop - 2);
+            panel.style.maxHeight = availableHeight + 'px';
+
+            // 先尝试常规布局，再逐级压缩；极端小窗口仍保留滚动兜底。
+            if(panel.scrollHeight <= panel.clientHeight + 2) return;
+            panel.classList.add('boss-fit-compact');
+            if(panel.scrollHeight <= panel.clientHeight + 2) return;
+            panel.classList.add('boss-fit-tight');
+        }
+
+        function resetChallengePanelFit() {
+            const panel = document.getElementById('challenge-box');
+            if(!panel) return;
+            panel.classList.remove('challenge-fit-compact', 'challenge-fit-tight');
+        }
+
+        function fitChallengePanel() {
+            const panel = document.getElementById('challenge-box');
+            if(!panel || panel.style.display === 'none') return;
+
+            panel.classList.remove('challenge-fit-compact', 'challenge-fit-tight');
+            panel.scrollTop = 0;
+
+            if(panel.scrollHeight <= panel.clientHeight + 2) return;
+            panel.classList.add('challenge-fit-compact');
+            if(panel.scrollHeight <= panel.clientHeight + 2) return;
+            panel.classList.add('challenge-fit-tight');
+        }
+
+        function triggerBossRelayQuestion() {
+            clearBossRelayTimers();
+            if(!bossState.active) return;
+            if(bossState.step >= 8) return completeBossRelay();
+
+            bossState.currentTask = generateBossRelayTask();
+            bossState.readingProgress = 0;
+            bossState.resolving = false;
+            bossState.relayResolving = false;
+            let sealPauseMs = state.isSealed ? state.sealTimer * 100 : 0;
+            bossState.deadline = Date.now() + bossState.currentTask.deadlineMs + sealPauseMs;
+            startChallengeRush(bossState.currentTask.deadlineMs);
+            spawnBossRushWave();
+
+            document.getElementById('boss-type2-ui').style.display = 'none';
+            document.getElementById('boss-type1-ui').style.display = 'flex';
+            document.getElementById('boss-relay-title').innerText = getBossTitle();
+            document.getElementById('boss-relay-progress').innerText = `${getBossPowerName()}：${bossState.step} / 8`;
+            document.getElementById('boss-relay-group').innerText = getBossGroupPrompt(bossState.step, bossState.currentTask);
+            document.getElementById('boss-relay-kind').innerText = `当前挑战：${bossState.currentTask.kind}`;
+            document.getElementById('boss-t1-word').innerText = bossState.currentTask.text;
+            document.getElementById('boss-t1-fill').style.width = '0%';
+            document.getElementById('boss-relay-feedback').innerText = '';
+            document.getElementById('boss-reading-wrap').style.display = bossState.currentTask.mode === 'read' ? 'block' : 'none';
+            document.getElementById('boss-test-pass').style.display = (config.testMode && bossState.currentTask.mode === 'read') ? 'inline-block' : 'none';
+
+            let options = document.getElementById('boss-relay-options');
+            options.innerHTML = '';
+            options.style.display = bossState.currentTask.mode === 'task' ? 'flex' : 'none';
+            if(bossState.currentTask.mode === 'task') {
+                bossState.currentTask.opts.forEach(opt => {
+                    let btn = document.createElement('button');
+                    btn.className = 'task-btn'; btn.innerText = opt;
+                    btn.onclick = () => handleBossRelayClick(opt, btn);
+                    options.appendChild(btn);
+                });
+            }
+
+            requestAnimationFrame(fitBossRelayPanel);
+        }
+
+        function handleBossRelayClick(selected, btn) {
+            lockOptionButtons('boss-relay-options');
+            if(!bossState.active || bossState.resolving || !bossState.currentTask || bossState.currentTask.mode !== 'task') return;
+            if(selected === bossState.currentTask.ans) {
+                btn.style.backgroundColor = '#2ecc71'; btn.style.color = 'white';
+                finishBossStep(true);
+            } else {
+                btn.style.backgroundColor = '#e74c3c'; btn.style.color = 'white';
+                finishBossStep(false);
+            }
+        }
+
+        function registerCorrectAnswer() {
+            state.consecutiveCorrect += 1;
+            updateComboUI();
+            if(state.consecutiveCorrect >= 3) {
+                triggerSeal();
+            }
+        }
+
+        function registerBossCorrectAnswer() {
+            state.consecutiveCorrect = 0;
+            updateComboUI();
+        }
+
+        function finishBossStep(success) {
+            if(!bossState.active || bossState.relayResolving) return;
+            bossState.relayResolving = true;
+            bossState.resolving = true;
+            clearBossRelayTimers();
+            clearChallengeRush();
+            document.getElementById('boss-test-pass').style.display = 'none';
+            lockOptionButtons('boss-relay-options');
+
+            let groupNum = bossState.step + 1;
+            let feedback = document.getElementById('boss-relay-feedback');
+            if(success) {
+                SFX.success();
+                feedback.innerText = `✅ 第 ${groupNum} 组点亮${getBossPowerName()}！`;
+                feedback.style.color = '#2ecc71';
+                triggerComboUltimate();
+                registerBossCorrectAnswer();
+            } else {
+                SFX.fail();
+                state.consecutiveCorrect = 0;
+                updateComboUI();
+                feedback.innerText = `第 ${groupNum} 组挑战失败，危险度 +1！`;
+                feedback.style.color = '#ffeb3b';
+                if(addDangerBlock('boss relay failed')) return;
+            }
+
+            bossState.step++;
+            document.getElementById('boss-relay-progress').innerText = `${getBossPowerName()}：${Math.min(bossState.step, 8)} / 8`;
+            bossFeedbackTimerId = setTimeout(() => {
+                bossFeedbackTimerId = null;
+                if(!state.isPlaying || !bossState.active) return;
+                if(bossState.step >= 8) completeBossRelay();
+                else triggerBossRelayQuestion();
+            }, 250);
+        }
+
+        function completeBossRelay() {
+            clearBossRelayTimers();
+            bossState.active = false;
+            bossState.currentTask = null;
+            bossState.resolving = false;
+            bossState.relayResolving = false;
+            if(battleState) battleState.bossRush = false;
+            clearChallengeRush();
+            setBattleBanner('Boss 怪潮被压回去了！', '');
+            SynthBGM.setBossMode(false); // 恢复正常BGM
+            document.getElementById('boss-container').style.display = 'none';
+            resetBossRelayPanelFit();
+            endGame(true);
+        }
+        // ====================================================
+
+        function gameLoop() {
+            if(timerLoop) clearInterval(timerLoop);
+            lastTickTime = Date.now();
+            
+            timerLoop = setInterval(() => {
+                if(!state.isPlaying || state.isPaused) return;
+                const now = Date.now();
+                const deltaMs = Math.min(180, now - lastTickTime || 100);
+                lastTickTime = now;
+
+                state.timeElapsed += 0.1;
+                let remaining = config.duration - state.timeElapsed;
+                let m = Math.floor(Math.max(remaining, 0)/60);
+                let s = Math.floor(Math.max(remaining, 0)%60);
+                document.getElementById('time-text').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                document.getElementById('evolve-fill').style.width = Math.min(state.timeElapsed / config.duration * 100, 100) + '%';
+
+                let vol = getVolume();
+                document.getElementById('vol-fill').style.width = Math.min(vol, 100) + '%';
+
+                if(state.isSealed) {
+                    state.sealTimer -= 1;
+                    document.getElementById('seal-text').innerText = `梦境结界展开！小怪暂停 ${Math.ceil(state.sealTimer/10)} 秒！`;
+                    if(state.sealTimer <= 0) endSeal();
+                    return;
+                }
+
+                if(remaining <= 0 && !state.challengeActive && !bossState.active) {
+                    if(!state.bossCleared) {
+                        state.bossCleared = true;
+                        startBossPhase();
+                        return;
+                    }
+                    return endGame(true);
+                }
+
+                if (bossState.active) {
+                    let timeLeft = Math.ceil((bossState.deadline - Date.now()) / 1000);
+                    document.getElementById('boss-timer').innerText = `剩余：${Math.max(timeLeft, 0)}s`;
+
+                    if (bossState.currentTask && bossState.currentTask.mode === 'read') {
+                        applyReadingProgress(vol, {
+                            progressOwner: bossState,
+                            fillId: 'boss-t1-fill',
+                            successCallback: () => finishBossStep(true),
+                            failCallback: () => finishBossStep(false),
+                            timeLeft
+                        });
+                    } else if (bossState.currentTask && bossState.currentTask.mode === 'task') {
+                        if (timeLeft <= 0) finishBossStep(false);
+                    }
+                    return; 
+                }
+
+                let timeLeft = Math.ceil((state.challengeDeadline - Date.now()) / 1000);
+
+                if(state.challengeActive) {
+                    document.getElementById('challenge-timer').innerText = `剩余: ${Math.max(timeLeft, 0)}s`;
+                    let cMode = state.currentChall.mode;
+
+                    if (cMode === 'read' || cMode === 'class-read' || cMode === 'bomb-defuse') {
+                        applyReadingProgress(vol, {
+                            successCallback: () => {
+                                if(cMode === 'bomb-defuse') finishChallenge(true, "炸弹已被拆除！");
+                                else finishChallenge(true);
+                            },
+                            failCallback: () => {
+                                if(cMode === 'bomb-defuse') {
+                                    if(addDangerBlock('bomb failed')) return;
+                                    finishChallenge(false, "炸弹爆炸！危险度 +1！", { dangerAlreadyHandled: true });
+                                } else {
+                                    finishChallenge(false);
+                                }
+                            },
+                            timeLeft
+                        });
+                    } else if (cMode === 'task') {
+                        if(timeLeft <= 0) finishChallenge(false, "任务超时！");
+                    }
+                } else {
+                    if(!isTaskVolumeMode() && applyNoiseDanger(vol)) return;
+
+                    if (state.challengeTimes.length > 0 && state.timeElapsed >= state.challengeTimes[0]) {
+                        state.challengeTimes.shift(); triggerChallenge();
+                    }
+                }
+            }, 100);
+        }
+
+        function triggerChallenge() {
+            clearChallengeTimers();
+            resetChallengePanelFit();
+            state.challengeActive = true;
+            state.challengeResolving = false;
+            state.currentChall = generateChallengeData();
+            let chall = state.currentChall;
+            let challengeDurationMs = 10000;
+            
+            const box = document.getElementById('challenge-box');
+            document.getElementById('monster').classList.add('has-question');
+            document.getElementById('reading-bar-wrap').style.display = 'none';
+            document.getElementById('task-options').style.display = 'none';
+            document.getElementById('bomb-icon').style.display = 'none';
+            document.getElementById('challenge-test-pass').style.display = 'none';
+            document.getElementById('challenge-group-callout').style.display = 'none';
+            
+            let groupUI = document.getElementById('challenge-group-chip');
+            let subjUI = document.getElementById('challenge-subj-chip');
+            groupUI.innerText = chall.group;
+            subjUI.innerText = chall.subj;
+            document.getElementById('challenge-text').innerText = chall.text;
+
+            if (chall.mode === 'bomb-defuse') {
+                challengeDurationMs = 10000;
+                state.challengeDeadline = Date.now() + challengeDurationMs; state.readingProgress = 0;
+                box.className = 'trap-mode';
+                document.getElementById('challenge-title').innerText = `拆弹模式：大声喊密码！失败危险度 +1`;
+                document.getElementById('reading-bar-wrap').style.display = 'block'; document.getElementById('reading-fill').style.width = '0%';
+                document.getElementById('bomb-icon').innerHTML = renderVisualValue('effect-bomb');
+                document.getElementById('bomb-icon').style.display = 'block'; showBattleEffect(['effect-bomb', 'proj-lightning'], 900);
+            } else if (chall.mode === 'task') {
+                challengeDurationMs = 20000;
+                state.challengeDeadline = Date.now() + challengeDurationMs; 
+                box.className = 'task-mode';
+                document.getElementById('challenge-title').innerText = `选择正确答案`;
+                document.getElementById('challenge-group-callout').innerText = `请${chall.group}进行选择题作答`;
+                document.getElementById('challenge-group-callout').style.display = 'inline-flex';
+                let opsDiv = document.getElementById('task-options'); opsDiv.innerHTML = '';
+                chall.opts.forEach(opt => {
+                    let btn = document.createElement('button'); btn.className = 'task-btn'; btn.innerText = opt;
+                    btn.onclick = () => handleTaskClick(opt, btn); opsDiv.appendChild(btn);
+                });
+                opsDiv.style.display = 'flex'; showBattleEffect(['effect-question', 'effect-spark'], 700);
+            } else if (chall.mode === 'class-read') {
+                challengeDurationMs = 10000;
+                state.challengeDeadline = Date.now() + challengeDurationMs; state.readingProgress = 0;
+                box.className = 'class-mode';
+                document.getElementById('challenge-title').innerText = `全班一起大声喊出题目内容！`;
+                document.getElementById('reading-bar-wrap').style.display = 'block'; document.getElementById('reading-fill').style.width = '0%';
+                showBattleEffect(['effect-sound', 'effect-spark'], 700);
+            } else {
+                challengeDurationMs = 10000;
+                state.challengeDeadline = Date.now() + challengeDurationMs; state.readingProgress = 0;
+                box.className = '';
+                document.getElementById('challenge-title').innerText = `大声且持续朗读蓄力！`;
+                document.getElementById('reading-bar-wrap').style.display = 'block'; document.getElementById('reading-fill').style.width = '0%';
+                showBattleEffect(['effect-sound', 'effect-spark'], 700);
+            }
+            if (config.testMode && ['read', 'class-read', 'bomb-defuse'].includes(chall.mode)) {
+                document.getElementById('challenge-test-pass').style.display = 'inline-block';
+            }
+            box.style.display = 'flex';
+            startChallengeRush(challengeDurationMs);
+            requestAnimationFrame(fitChallengePanel);
+        }
+
+        function handleTaskClick(selectedOpt, btn) {
+            lockOptionButtons('task-options');
+            if (!state.challengeActive || state.challengeResolving || state.currentChall.mode !== 'task') return;
+            if (selectedOpt === state.currentChall.ans) {
+                btn.style.backgroundColor = '#2ecc71'; btn.style.color = 'white';
+                finishChallenge(true, "✅ 回答正确！");
+            } else {
+                btn.style.backgroundColor = '#e74c3c'; btn.style.color = 'white';
+                finishChallenge(false, "选择错误！");
+            }
+        }
+
+        function finishChallenge(success, reasonMsg = null, options = {}) {
+            if (state.challengeResolving) return;
+            state.challengeResolving = true;
+            clearChallengeTimers();
+            clearChallengeRush();
+            state.challengeActive = false;
+            document.getElementById('challenge-box').style.display = 'none';
+            document.getElementById('challenge-group-callout').style.display = 'none';
+            resetChallengePanelFit();
+            document.getElementById('monster').classList.remove('has-question');
+            document.getElementById('challenge-group-chip').innerText = '';
+            document.getElementById('challenge-subj-chip').innerText = '';
+            document.getElementById('challenge-test-pass').style.display = 'none';
+            document.getElementById('side-alert-left').style.display = 'none'; document.getElementById('side-alert-right').style.display = 'none';
+
+            const msgEl = document.getElementById('status-msg');
+            
+            if(!success) {
+                if(!options.dangerAlreadyHandled) {
+                    SFX.fail(); state.dangerLevel += 1; updateDangerUI();
+                }
+                state.consecutiveCorrect = 0;
+                updateComboUI();
+                msgEl.innerText = reasonMsg ? reasonMsg : "挑战失败！危险度+1"; msgEl.style.color = "#ff4757";
+                setBattleBanner('挑战失败，怪潮逼近！', 'warning');
+                if(state.dangerLevel >= MAX_DANGER) { endGame(false); return; }
+            } else {
+                SFX.success();
+                triggerAnswerSkill();
+                registerCorrectAnswer();
+                showBattleEffect(levelsInfo[currentLevelIndex].comboSkill || ['effect-spark', 'effect-burst'], 900);
+                msgEl.innerText = reasonMsg ? reasonMsg : "充能成功！守护者与神兽释放技能！"; msgEl.style.color = "#2ed573";
+            }
+            
+            challengeFeedbackTimerId = setTimeout(() => {
+                challengeFeedbackTimerId = null;
+                state.challengeResolving = false;
+                if(state.isPlaying && !state.isSealed) {
+                    msgEl.innerText = getLevelStatusText();
+                    msgEl.style.color = "white";
+                }
+            }, 2000);
+        }
+
+        // 许愿功能
+        function grantWish() {
+            const input = document.getElementById('wish-input');
+            if(input.value.trim() === '') {
+                alert("许愿不能是空白的哦！");
+                return;
+            }
+            SFX.dragonRoar();
+            input.style.display = 'none';
+            document.querySelector('#wish-box .btn-main').style.display = 'none';
+            document.getElementById('wish-granted').style.display = 'block';
+        }
+
+        function endGame(win) {
+            state.isPlaying = false;
+            clearInterval(timerLoop);
+            if(battleLoop) {
+                clearInterval(battleLoop);
+                battleLoop = null;
+            }
+            clearChallengeTimers();
+            clearBossRelayTimers();
+            clearChallengeRush();
+            clearBattleState();
+            bossState.active = false;
+            bossState.currentTask = null;
+            bossState.resolving = false;
+            bossState.relayResolving = false;
+            state.challengeActive = false;
+            state.challengeResolving = false;
+            if(battleState) battleState.bossRush = false;
+            SynthBGM.stop(); SynthBGM.setBossMode(false);
+            document.getElementById('side-alert-left').style.display = 'none'; document.getElementById('side-alert-right').style.display = 'none';
+            document.getElementById('boss-container').style.display = 'none';
+            resetBossRelayPanelFit();
+            resetChallengePanelFit();
+            document.getElementById('monster').classList.remove('has-question');
+            document.getElementById('challenge-group-chip').innerText = '';
+            document.getElementById('challenge-subj-chip').innerText = '';
+            document.getElementById('challenge-group-callout').style.display = 'none';
+
+            // 隐藏许愿相关组件重置状态
+            document.getElementById('wish-box').style.display = 'none';
+            document.getElementById('wish-input').style.display = 'block';
+            document.getElementById('wish-input').value = '';
+            document.querySelector('#wish-box .btn-main').style.display = 'block';
+            document.getElementById('wish-granted').style.display = 'none';
+
+            const levelData = levelsInfo[currentLevelIndex];
+            const actionsDiv = document.getElementById('res-actions'); actionsDiv.innerHTML = ''; 
+            const resEmojiDiv = document.getElementById('res-emoji-container');
+
+            if(win) {
+                SFX.success();
+                document.body.className = (currentLevelIndex === levelsInfo.length - 1) ? `bg-level-7` : `bg-level-${Math.min(levelData.id + 1, 7)}`;
+                document.getElementById('res-title').innerText = "试炼升级成功！";
+                document.getElementById('res-title').style.color = "var(--primary-color)";
+                resEmojiDiv.innerHTML = `<span id="res-emoji" style="font-size: 120px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.6)); display: inline-flex; gap: 12px; align-items: center;">${renderVisualValue([heroInfo.emoji, levelData.beastEmoji])}</span>`;
+                
+                if (currentLevelIndex === levelsInfo.length - 1) {
+                    SFX.dragonRoar();
+                    document.getElementById('res-title').innerText = "神兽试炼完成！";
+                    document.getElementById('res-desc').innerText = "小小守护者与东方神龙守住了最终结界，全班成为最强试炼队！";
+                    document.getElementById('wish-box').style.display = 'flex'; // 显示许愿框
+                    actionsDiv.innerHTML = `<button class="btn-pause" onclick="showScreen('menu-screen')">返回主菜单</button>`;
+                } else {
+                    const nextLevelData = levelsInfo[currentLevelIndex + 1];
+                    document.getElementById('res-desc').innerText = `太棒了！${heroInfo.name}和【${levelData.beastName}】击退了${levelData.themeName}怪潮，升到 Lv.${currentLevelIndex + 2}，新技能：${nextLevelData.heroSkill}！`;
+                    actionsDiv.innerHTML = `<button class="btn-pause" onclick="showScreen('menu-screen')">返回菜单</button><button class="btn-main" onclick="startGame(${currentLevelIndex + 1})">进入下一关：${nextLevelData.beastName}</button>`;
+                }
+            } else {
+                SFX.fail();
+                document.body.className = '';
+                document.getElementById('res-title').innerText = "💀 试炼失败";
+                document.getElementById('res-title').style.color = "var(--danger-color)";
+                resEmojiDiv.innerHTML = `<span id="res-emoji" style="font-size: 120px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.6));">💥</span>`;
+                document.getElementById('res-desc').innerText = `噪音小怪突破了${levelData.themeName}防线，试炼队需要重新挑战本关。`;
+                actionsDiv.innerHTML = `<button class="btn-pause" onclick="showScreen('menu-screen')">返回菜单</button><button class="btn-restart" onclick="startGame(${currentLevelIndex})">重试本关</button>`;
+            }
+            showScreen('result-screen');
+        }
+
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(positionFighterZones);
+            if(bossState.active) requestAnimationFrame(fitBossRelayPanel);
+        });
+    </script>
+</body>
+</html>
