@@ -892,7 +892,7 @@
             if(!icon) return `<span class="${escapeHtml(className)}">${escapeHtml(iconKey || '')}</span>`;
             const classes = ['ui-icon-shell'];
             if(className) classes.push(className);
-            return `<span class="${classes.join(' ')}" role="img" aria-label="${escapeHtml(icon.label)}" title="${escapeHtml(icon.label)}"><span class="ui-icon-fallback">${escapeHtml(icon.fallback)}</span><img class="ui-icon-img" src="${icon.src}" alt="${escapeHtml(icon.label)}" decoding="async" loading="lazy" onerror="this.parentNode.classList.add('icon-fallback');this.remove()"></span>`;
+            return `<span class="${classes.join(' ')}" role="img" aria-label="${escapeHtml(icon.label)}" title="${escapeHtml(icon.label)}"><span class="ui-icon-fallback">${escapeHtml(icon.fallback)}</span><img class="ui-icon-img" src="${icon.src}" alt="${escapeHtml(icon.label)}" decoding="async" onerror="this.parentNode.classList.add('icon-fallback');this.remove()"></span>`;
         }
 
         function renderVisualPart(part, className = '') {
