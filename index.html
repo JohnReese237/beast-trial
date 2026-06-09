@@ -391,7 +391,7 @@
 
             <div style="display: flex; gap: 15px; justify-content: center;">
                 <button class="btn-main" style="font-size: 1.5rem; padding: 15px 50px;" onclick="startGame(0)">进入课堂</button>
-                <button id="toggle-bgm-main" class="btn-music" onclick="toggleBGMState()">🎵 音乐: 开</button>
+                <button id="toggle-bgm-main" class="btn-music" onclick="toggleBGMState()">🔇 音乐: 暂无</button>
             </div>
         </div>
     </div>
@@ -560,80 +560,27 @@
     </div>
 
     <script>
-        // --- 增强版 BGM 与 SFX 系统 ---
-        let isBgmEnabled = true;
+        // --- BGM 已移除：保留空接口，等待接入新的音乐文件 ---
+        let isBgmEnabled = false;
         const SynthBGM = {
-            ctx: null, isPlaying: false, timer: null, step: 0, volume: 0.032, isBossMode: false,
-            normalPattern: [
-                [261.63, 329.63, 392.00], [329.63], [392.00], [523.25],
-                [246.94, 293.66, 392.00], [293.66], [392.00], [493.88],
-                [220.00, 261.63, 329.63], [261.63], [329.63], [440.00],
-                [196.00, 246.94, 329.63], [246.94], [329.63], 0
-            ],
-            bossPattern: [
-                [329.63, 392.00, 493.88], [392.00], [493.88], [659.25],
-                [293.66, 349.23, 440.00], [349.23], [440.00], [587.33]
-            ],
-            
-            init(audioCtx) { this.ctx = audioCtx; },
-
-            getInterval() { return this.isBossMode ? 260 : 360; },
-            
-            setBossMode(active) {
-                if(this.isBossMode === active) return;
-                this.isBossMode = active;
-                if(this.isPlaying) {
-                    clearInterval(this.timer);
-                    this.timer = setInterval(() => this.playNote(), this.getInterval());
-                }
-            },
-
-            playPianoNote(freq, delay = 0, volume = this.volume, duration = 0.46) {
-                if(!this.ctx || !freq) return;
-                const now = this.ctx.currentTime + delay;
-                const body = this.ctx.createOscillator();
-                const hammer = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                const filter = this.ctx.createBiquadFilter();
-                body.type = 'triangle';
-                hammer.type = 'sine';
-                body.frequency.setValueAtTime(freq, now);
-                hammer.frequency.setValueAtTime(freq * 2.01, now);
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(this.isBossMode ? 2100 : 1750, now);
-                filter.Q.setValueAtTime(0.45, now);
-                gain.gain.setValueAtTime(0.0001, now);
-                gain.gain.linearRampToValueAtTime(volume, now + 0.018);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-                body.connect(filter);
-                hammer.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.ctx.destination);
-                body.start(now);
-                hammer.start(now);
-                body.stop(now + duration);
-                hammer.stop(now + duration);
-            },
-
-            playNote() {
-                if (!this.isPlaying || !isBgmEnabled) return;
-                const pattern = this.isBossMode ? this.bossPattern : this.normalPattern;
-                const item = pattern[this.step % pattern.length];
-                const sealShift = state.isSealed ? 1.5 : 1;
-                const notes = Array.isArray(item) ? item : (item ? [item] : []);
-                notes.forEach((freq, index) => {
-                    this.playPianoNote(freq * sealShift, index * 0.045, this.volume * (this.isBossMode ? 1.08 : 1), this.isBossMode ? 0.34 : 0.54);
-                });
-                this.step++;
-            },
-            start() { if (this.isPlaying || !this.ctx || !isBgmEnabled) return; this.isPlaying = true; this.playNote(); this.timer = setInterval(() => this.playNote(), this.getInterval()); },
-            stop() { this.isPlaying = false; if (this.timer) clearInterval(this.timer); this.timer = null; }
+            ctx: null,
+            isPlaying: false,
+            currentLevel: 1,
+            isBossMode: false,
+            isSealMode: false,
+            init(audioCtx) { this.ctx = audioCtx || this.ctx; },
+            start() { this.isPlaying = false; },
+            stop() { this.isPlaying = false; },
+            setLevel(lv) { this.currentLevel = Math.max(1, Math.min(7, lv)); },
+            setBossMode(active) { this.isBossMode = !!active; },
+            setSealMode(active) { this.isSealMode = !!active; }
         };
         
         function toggleBGMState() {
-            isBgmEnabled = !isBgmEnabled; let txt = isBgmEnabled ? "🎵 音乐: 开" : "🔇 音乐: 关";
-            document.getElementById('toggle-bgm-main').innerText = txt;
-            if (isBgmEnabled && state.isPlaying && !state.isPaused) SynthBGM.start(); else SynthBGM.stop();
+            isBgmEnabled = false;
+            SynthBGM.stop();
+            const btn = document.getElementById('toggle-bgm-main');
+            if (btn) btn.innerText = "🔇 音乐: 暂无";
         }
 
         const SFX = {
@@ -2625,7 +2572,7 @@
                 initBattleState();
                 state.isSealed = false; state.sealTimer = 0; state.challengeActive = false; state.challengeResolving = false;
                 state.bossCleared = false; bossState.active = false; bossState.step = 0; bossState.currentTask = null; bossState.resolving = false; bossState.relayResolving = false;
-                SynthBGM.setBossMode(false);
+                SynthBGM.setBossMode(false); SynthBGM.setSealMode(false); SynthBGM.setLevel(levelData.id);
                 
                 document.getElementById('level-badge').innerText = `第 ${levelData.id} 关 · ${levelData.themeName}`;
                 document.getElementById('evolve-fill').style.width = '0%';
@@ -2660,6 +2607,7 @@
         function triggerSeal() {
             clearAllDanger();
             SFX.seal(); state.isSealed = true; state.sealTimer = 100; // 10秒
+            SynthBGM.setSealMode(true);
             if(battleState) battleState.shieldUntil = Date.now() + 10000;
             if(bossState.active) bossState.deadline += 10000;
             state.consecutiveCorrect = 0; updateComboUI();
@@ -2674,7 +2622,8 @@
         }
 
         function endSeal() {
-            state.isSealed = false; document.getElementById('seal-text').style.display = 'none';
+            state.isSealed = false; SynthBGM.setSealMode(false);
+            document.getElementById('seal-text').style.display = 'none';
             document.getElementById('battle-stage').classList.remove('sealed');
             document.getElementById('hero-emoji').classList.remove('sealed-boost');
             document.getElementById('monster-emoji').classList.remove('sealed-boost');
@@ -2798,11 +2747,14 @@
             document.getElementById('boss-type2-ui').style.display = 'none';
             resetBossRelayPanelFit();
             document.getElementById('boss-test-pass').style.display = 'none';
-            document.getElementById('boss-relay-title').innerText = getBossTitle();
-            document.getElementById('boss-relay-progress').innerText = `${getBossPowerName()}：0 / 8`;
+            document.getElementById('boss-relay-title').style.display = 'none';
+            document.getElementById('boss-relay-progress').style.display = 'none';
+            document.getElementById('boss-relay-subtitle').style.display = 'none';
             document.getElementById('boss-timer').innerText = '剩余：10s';
-            document.getElementById('boss-relay-group').innerText = getBossGroupPrompt(0, null);
+            document.getElementById('boss-relay-group').style.display = 'none';
             document.getElementById('boss-relay-kind').innerText = '准备迎接挑战';
+            document.getElementById('challenge-group-callout').innerText = `接力 0/8 · ${getBossGroupPrompt(0, null)}`;
+            document.getElementById('challenge-group-callout').style.display = 'inline-flex';
             if(battleState) {
                 battleState.bossRush = true;
                 battleState.spawnInterval = getCurrentBattleLevelData().bossRushSpawnInterval;
@@ -2903,9 +2855,10 @@
 
             document.getElementById('boss-type2-ui').style.display = 'none';
             document.getElementById('boss-type1-ui').style.display = 'flex';
-            document.getElementById('boss-relay-title').innerText = getBossTitle();
-            document.getElementById('boss-relay-progress').innerText = `${getBossPowerName()}：${bossState.step} / 8`;
-            document.getElementById('boss-relay-group').innerText = getBossGroupPrompt(bossState.step, bossState.currentTask);
+            document.getElementById('boss-relay-title').style.display = 'none';
+            document.getElementById('boss-relay-progress').style.display = 'none';
+            document.getElementById('challenge-group-callout').innerText = `接力 ${bossState.step}/8 · ${getBossGroupPrompt(bossState.step, bossState.currentTask)}`;
+            document.getElementById('challenge-group-callout').style.display = 'inline-flex';
             document.getElementById('boss-relay-kind').innerText = `当前挑战：${bossState.currentTask.kind}`;
             document.getElementById('boss-t1-word').innerText = bossState.currentTask.text;
             document.getElementById('boss-t1-fill').style.width = '0%';
@@ -2966,7 +2919,7 @@
             let feedback = document.getElementById('boss-relay-feedback');
             if(success) {
                 SFX.success();
-                feedback.innerText = `✅ 第 ${groupNum} 组点亮${getBossPowerName()}！`;
+                feedback.innerText = `✅ 第 ${groupNum} 组挑战成功！`;
                 feedback.style.color = '#2ecc71';
                 triggerComboUltimate();
                 registerBossCorrectAnswer();
@@ -2980,7 +2933,8 @@
             }
 
             bossState.step++;
-            document.getElementById('boss-relay-progress').innerText = `${getBossPowerName()}：${Math.min(bossState.step, 8)} / 8`;
+            const updatedStep = Math.min(bossState.step, 8);
+            document.getElementById('challenge-group-callout').innerText = `接力 ${updatedStep}/8 · 小组接力挑战中`;
             bossFeedbackTimerId = setTimeout(() => {
                 bossFeedbackTimerId = null;
                 if(!state.isPlaying || !bossState.active) return;
@@ -3000,6 +2954,7 @@
             setBattleBanner('Boss 怪潮被压回去了！', '');
             SynthBGM.setBossMode(false); // 恢复正常BGM
             document.getElementById('boss-container').style.display = 'none';
+            document.getElementById('challenge-group-callout').style.display = 'none';
             resetBossRelayPanelFit();
             endGame(true);
         }
