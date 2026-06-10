@@ -1349,15 +1349,8 @@
             ]
         };
         function getActiveSemesters() {
-            const level = currentLevelIndex + 1;
-            const semesters = [];
-            if (level >= 1) semesters.push('2b-u1');
-            if (level >= 2) semesters.push('2b-u2');
-            if (level >= 3) semesters.push('2b-u3');
-            if (level >= 4) semesters.push('2b-u4');
-            if (level >= 5) semesters.push('2b-u5');
-            if (level >= 6) semesters.push('2b-u6');
-            return semesters;
+            // 所有关卡均覆盖全部6单元，内容由全局去重保证不重复
+            return ['2b-u1','2b-u2','2b-u3','2b-u4','2b-u5','2b-u6'];
         }
 
         function getActiveVocab() {
@@ -1412,8 +1405,8 @@
 
         function getChallengeTypePool() {
             return [
-                'en-read', 'en-read', 'en-read',
-                'en-task', 'en-task', 'en-task',
+                'en-read', 'en-read',
+                'en-task', 'en-task', 'en-task', 'en-task',
                 'bomb-defuse'
             ];
         }
@@ -2531,8 +2524,8 @@
 
             state.challengeTimes = [];
             bags = { 'vocab':[], 'sents':[], 'typeBag':[] };
-            usedVocabSet.clear();
-            usedSentsSet.clear();
+            // 仅全新游戏（从菜单进入第一关）重置全局去重
+            if(levelIndex === 0) { usedVocabSet.clear(); usedSentsSet.clear(); }
             groupBag = [];
             lastTypePoolKey = '';
 
