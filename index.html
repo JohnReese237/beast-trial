@@ -1508,11 +1508,11 @@
         const levelsInfo = [
             { id: 1, duration: 60,  questions: 5,  threshold: 35, speed: 1.7, beastEmoji: "beast-fox", beastName: "灵狐", themeName: "梦境森林", heroSkill: "木杖敲击", beastSkill: "灵光突袭", heroProjectile: "proj-light", beastProjectile: "effect-spark", skillText: "灵狐：灵光突袭　｜　守护者：木杖敲击", monsters: ["mob-noise","mob-shadow","mob-bug","mob-bug"], comboSkill: ["proj-light","effect-burst"], answerSkillCount: 2, enemyCap: 8, spawnInterval: 2100, attackInterval: 1250, bossRushSpawnInterval: 1050, ultimateEffect: ["hero-guardian","+","beast-fox","effect-answer","effect-burst"], answerSkillBurstCount: 5 },
             { id: 2, duration: 90,  questions: 9,  threshold: 24, speed: 2.8, beastEmoji: "beast-tiger", beastName: "雷纹虎", themeName: "雷鸣山谷", heroSkill: "星光散射", beastSkill: "雷爪冲击", heroProjectile: "effect-spark", beastProjectile: "proj-lightning", skillText: "雷纹虎：雷爪冲击　｜　守护者：星光散射", monsters: ["mob-noise","mob-rage","mob-shadow","mob-shadow"], comboSkill: ["effect-spark","proj-lightning","effect-burst"], answerSkillCount: 2, enemyCap: 9, spawnInterval: 1900, attackInterval: 1200, bossRushSpawnInterval: 980, ultimateEffect: ["hero-guardian","+","beast-tiger","effect-spark","proj-lightning"], answerSkillBurstCount: 6 },
-            { id: 3, duration: 120, questions: 14, threshold: 21, speed: 3.2, beastEmoji: "beast-unicorn", beastName: "星辉独角兽", themeName: "星光草原", heroSkill: "旋风术", beastSkill: "星辉净化", heroProjectile: "proj-wind", beastProjectile: "proj-rainbow", skillText: "独角兽：星辉净化　｜　守护者：旋风术", monsters: ["mob-rage","mob-shadow","mob-bug","mob-rage"], comboSkill: ["proj-rainbow","proj-wind","effect-spark"], answerSkillCount: 3, enemyCap: 10, spawnInterval: 1650, attackInterval: 1160, bossRushSpawnInterval: 900, ultimateEffect: ["proj-rainbow","proj-wind","effect-answer"], answerSkillBurstCount: 7 },
-            { id: 4, duration: 135, questions: 18, threshold: 19, speed: 3.6, beastEmoji: "beast-drake", beastName: "云纹小龙", themeName: "云海遗迹", heroSkill: "元素连击", beastSkill: "云海冲击", heroProjectile: "proj-lightning", beastProjectile: "proj-wave", skillText: "小龙：云海冲击　｜　守护者：元素连击", monsters: ["mob-rage","mob-shadow","mob-noise","mob-bug","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-lightning","proj-wind"], answerSkillCount: 3, enemyCap: 12, spawnInterval: 1500, attackInterval: 1120, bossRushSpawnInterval: 820, ultimateEffect: ["proj-wave","proj-lightning","proj-wind"], answerSkillBurstCount: 8 },
-            { id: 5, duration: 150, questions: 22, threshold: 17, speed: 4.1, beastEmoji: "beast-lion", beastName: "金焰狮王", themeName: "烈阳神殿", heroSkill: "火焰冲击波", beastSkill: "金焰咆哮", heroProjectile: "proj-fire", beastProjectile: "proj-fire", skillText: "狮王：金焰咆哮　｜　守护者：火焰冲击波", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-rage","mob-shadow"], comboSkill: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillCount: 4, enemyCap: 13, spawnInterval: 1400, attackInterval: 1080, bossRushSpawnInterval: 760, ultimateEffect: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillBurstCount: 9 },
-            { id: 6, duration: 165, questions: 26, threshold: 15, speed: 4.6, beastEmoji: "beast-whale", beastName: "星海巨鲸", themeName: "梦海深渊", heroSkill: "星海法阵", beastSkill: "鲸歌安眠", heroProjectile: "proj-cosmos", beastProjectile: "proj-note", skillText: "巨鲸：鲸歌安眠　｜　守护者：星海法阵", monsters: ["mob-noise","mob-shadow","mob-rage","mob-bug","mob-noise","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-cosmos","proj-note","effect-spark"], answerSkillCount: 4, enemyCap: 14, spawnInterval: 1320, attackInterval: 1040, bossRushSpawnInterval: 700, ultimateEffect: ["proj-wave","proj-cosmos","proj-note","effect-answer"], answerSkillBurstCount: 10 },
-            { id: 7, duration: 180, questions: 30, threshold: 13, speed: 5.2, beastEmoji: "beast-dragon", beastName: "东方神龙", themeName: "最终梦境结界", heroSkill: "星陨法阵", beastSkill: "神龙吐息", heroProjectile: "proj-comet", beastProjectile: "proj-fire", skillText: "神龙：神龙吐息　｜　守护者：星陨法阵", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-shadow","mob-rage","mob-noise","mob-bug"], comboSkill: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-spark"], answerSkillCount: 5, enemyCap: 16, spawnInterval: 1220, attackInterval: 980, bossRushSpawnInterval: 620, ultimateEffect: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-burst"], answerSkillBurstCount: 12 }
+            { id: 3, duration: 120, questions: 14, threshold: 21, speed: 3.2, beastEmoji: "beast-unicorn", beastName: "星辉独角兽", themeName: "星光草原", heroSkill: "旋风术", beastSkill: "星辉净化", heroProjectile: "proj-wind", beastProjectile: "proj-rainbow", skillText: "独角兽：星辉净化　｜　守护者：旋风术", monsters: ["mob-rage","mob-shadow","mob-bug","mob-rage"], comboSkill: ["proj-rainbow","proj-wind","effect-spark"], answerSkillCount: 3, enemyCap: 10, spawnInterval: 1650, attackInterval: 1160, bossRushSpawnInterval: 900, ultimateEffect: ["proj-rainbow","proj-wind","effect-answer"], answerSkillBurstCount: 99 },
+            { id: 4, duration: 135, questions: 18, threshold: 19, speed: 3.6, beastEmoji: "beast-drake", beastName: "云纹小龙", themeName: "云海遗迹", heroSkill: "元素连击", beastSkill: "云海冲击", heroProjectile: "proj-lightning", beastProjectile: "proj-wave", skillText: "小龙：云海冲击　｜　守护者：元素连击", monsters: ["mob-rage","mob-shadow","mob-noise","mob-bug","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-lightning","proj-wind"], answerSkillCount: 3, enemyCap: 12, spawnInterval: 1500, attackInterval: 1120, bossRushSpawnInterval: 820, ultimateEffect: ["proj-wave","proj-lightning","proj-wind"], answerSkillBurstCount: 99 },
+            { id: 5, duration: 150, questions: 22, threshold: 17, speed: 4.1, beastEmoji: "beast-lion", beastName: "金焰狮王", themeName: "烈阳神殿", heroSkill: "火焰冲击波", beastSkill: "金焰咆哮", heroProjectile: "proj-fire", beastProjectile: "proj-fire", skillText: "狮王：金焰咆哮　｜　守护者：火焰冲击波", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-rage","mob-shadow"], comboSkill: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillCount: 4, enemyCap: 13, spawnInterval: 1400, attackInterval: 1080, bossRushSpawnInterval: 760, ultimateEffect: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillBurstCount: 99 },
+            { id: 6, duration: 165, questions: 26, threshold: 15, speed: 4.6, beastEmoji: "beast-whale", beastName: "星海巨鲸", themeName: "梦海深渊", heroSkill: "星海法阵", beastSkill: "鲸歌安眠", heroProjectile: "proj-cosmos", beastProjectile: "proj-note", skillText: "巨鲸：鲸歌安眠　｜　守护者：星海法阵", monsters: ["mob-noise","mob-shadow","mob-rage","mob-bug","mob-noise","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-cosmos","proj-note","effect-spark"], answerSkillCount: 4, enemyCap: 14, spawnInterval: 1320, attackInterval: 1040, bossRushSpawnInterval: 700, ultimateEffect: ["proj-wave","proj-cosmos","proj-note","effect-answer"], answerSkillBurstCount: 99 },
+            { id: 7, duration: 180, questions: 30, threshold: 13, speed: 5.2, beastEmoji: "beast-dragon", beastName: "东方神龙", themeName: "最终梦境结界", heroSkill: "星陨法阵", beastSkill: "神龙吐息", heroProjectile: "proj-comet", beastProjectile: "proj-fire", skillText: "神龙：神龙吐息　｜　守护者：星陨法阵", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-shadow","mob-rage","mob-noise","mob-bug"], comboSkill: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-spark"], answerSkillCount: 5, enemyCap: 16, spawnInterval: 1220, attackInterval: 980, bossRushSpawnInterval: 620, ultimateEffect: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-burst"], answerSkillBurstCount: 99 }
         ];
 
         let currentLevelIndex = 0;
@@ -2276,12 +2276,12 @@
             rightBall.animate(burstKeyframes(heroCX, heroCY, rightEndX, rightEndY),
                 { duration: 1100, easing, fill: 'forwards' });
 
-            // 音效立即跟上动画（80ms），清怪在视觉峰值（400ms）
+            // 立即标记怪物，避免飞行弹幕抢先击杀
+            directClearEnemies('left', leftClear);
+            directClearEnemies('right', rightClear);
+
+            // 音效同步动画
             setTimeout(() => { SFX.burstImpact(); }, 80);
-            setTimeout(() => {
-                directClearEnemies('left', leftClear);
-                directClearEnemies('right', rightClear);
-            }, 400);
 
             // 清理元素
             setTimeout(() => {
@@ -2348,60 +2348,57 @@
             clearEnemiesBatch('right', Math.max(rightCount, levelData.answerSkillCount + 1), 'ultimate');
         }
 
-        function renderEnemies(side, containerId) {
-            if(!battleState) return '';
+        // 增量更新怪物 DOM：只增删/改属性，不用 innerHTML 避免闪烁
+        function updateEnemyElements(side) {
+            if(!battleState) return;
+            const container = document.getElementById(side === 'left' ? 'left-monsters' : 'right-monsters');
+            if(!container) return;
             const list = side === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
-            return list.map(enemy => {
-                const classes = ['enemy'];
-                if(state.isSealed) classes.push('sealed');
-                if(enemy.state === 'hit') classes.push('hit');
-                if(enemy.state === 'dying') classes.push('dying');
-                if(enemy.state === 'attacking') classes.push('attacking');
-                const style = [
-                    `left:${enemy.x}px`,
-                    `top:${enemy.y}px`,
-                    `transform:translate(-50%, -50%) scale(${enemy.size.toFixed(2)})`
-                ].join(';');
-                return `<span class="${classes.join(' ')}" style="${style}">${renderVisualValue(enemy.emoji)}</span>`;
-            }).join('');
-        }
-
-        function renderProjectiles() {
-            if(!battleState) return '';
-            return battleState.projectiles.map(projectile => {
-                const cls = `projectile ${projectile.side === 'left' ? 'beast' : 'hero'}`;
-                return `<span class="${cls}" style="left:${projectile.x}px;top:${projectile.y}px;">${renderVisualValue(projectile.emoji)}</span>`;
-            }).join('');
-        }
-
-        function renderEffects() {
-            if(!battleState) return '';
-            return battleState.effects.map(effect => {
-                const iconHtml = renderVisualValue(effect.emoji);
-                const textHtml = effect.text ? `<span>${escapeHtml(effect.text)}</span>` : '';
-                return `<span class="battle-effect-item" style="left:${effect.x}px;top:${effect.y}px;">${iconHtml}${textHtml}</span>`;
-            }).join('');
+            const currentIds = new Set();
+            // 更新已有或创建新元素
+            list.forEach(enemy => {
+                currentIds.add(enemy.id);
+                let el = container.querySelector(`[data-eid="${enemy.id}"]`);
+                if(!el) {
+                    el = document.createElement('span');
+                    el.dataset.eid = enemy.id;
+                    el.className = 'enemy';
+                    el.innerHTML = renderVisualValue(enemy.emoji);
+                    container.appendChild(el);
+                }
+                // 更新类和样式
+                let cls = 'enemy';
+                if(state.isSealed) cls += ' sealed';
+                if(enemy.state === 'hit') cls += ' hit';
+                if(enemy.state === 'dying') cls += ' dying';
+                if(enemy.state === 'attacking') cls += ' attacking';
+                el.className = cls;
+                el.style.cssText = `left:${enemy.x}px;top:${enemy.y}px;transform:translate(-50%,-50%) scale(${enemy.size.toFixed(2)})`;
+            });
+            // 移除已不存在的怪物
+            container.querySelectorAll('.enemy').forEach(el => {
+                if(!currentIds.has(Number(el.dataset.eid))) el.remove();
+            });
         }
 
         function renderBattlefield() {
             if(!battleState) return;
-            const leftHtml = renderEnemies('left', 'left-monsters');
-            const rightHtml = renderEnemies('right', 'right-monsters');
-            const projectileHtml = renderProjectiles();
-            const effectHtml = renderEffects();
-            const enemyStamp = `${leftHtml}||${rightHtml}`;
-            if(enemyStamp !== battleState.lastEnemyStamp) {
-                document.getElementById('left-monsters').innerHTML = leftHtml;
-                document.getElementById('right-monsters').innerHTML = rightHtml;
-                battleState.lastEnemyStamp = enemyStamp;
+            updateEnemyElements('left');
+            updateEnemyElements('right');
+            // 弹幕和特效仍用 innerHTML（生命周期短，闪烁不明显）
+            const phtml = battleState.projectiles.map(p =>
+                `<span class="projectile ${p.side === 'left' ? 'beast' : 'hero'}" style="left:${p.x}px;top:${p.y}px;">${renderVisualValue(p.emoji)}</span>`
+            ).join('');
+            if(phtml !== battleState.lastProjectileStamp) {
+                document.getElementById('projectile-layer').innerHTML = phtml;
+                battleState.lastProjectileStamp = phtml;
             }
-            if(projectileHtml !== battleState.lastProjectileStamp) {
-                document.getElementById('projectile-layer').innerHTML = projectileHtml;
-                battleState.lastProjectileStamp = projectileHtml;
-            }
-            if(effectHtml !== battleState.lastEffectStamp) {
-                document.getElementById('effect-layer').innerHTML = effectHtml;
-                battleState.lastEffectStamp = effectHtml;
+            const ehtml = battleState.effects.map(ef =>
+                `<span class="battle-effect-item" style="left:${ef.x}px;top:${ef.y}px;">${renderVisualValue(ef.emoji)}${ef.text ? '<span>'+escapeHtml(ef.text)+'</span>' : ''}</span>`
+            ).join('');
+            if(ehtml !== battleState.lastEffectStamp) {
+                document.getElementById('effect-layer').innerHTML = ehtml;
+                battleState.lastEffectStamp = ehtml;
             }
         }
 
