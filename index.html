@@ -204,7 +204,7 @@
         .battle-effect-item { position: absolute; transform: translate(-50%, -50%); font-size: clamp(1.2rem, 3vw, 2rem); font-weight: bold; color: white; text-shadow: 0 0 10px rgba(255,255,255,0.75); z-index: 4; animation: floatFade 0.34s ease-out forwards; display: inline-flex; align-items: center; gap: 6px; }
         @keyframes floatFade { 0% { opacity: 0; transform: translate(-50%, -40%) scale(0.8); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -95%) scale(1.12); } }
         /* 答题技能范围攻击：技能图标边飞边放大 */
-        .lane-burst-ball { position: absolute; z-index: 22; pointer-events: none; font-size: 64px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 28px rgba(255,215,0,0.85)); will-change: left, transform, opacity; }
+        .lane-burst-ball { position: absolute; z-index: 22; pointer-events: none; font-size: 64px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 28px rgba(255,215,0,0.85)); }
         .battle-banner { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); min-width: 220px; max-width: calc(100% - 20px); padding: 8px 16px; border-radius: 999px; background: rgba(8, 12, 33, 0.7); border: 1px solid rgba(255,255,255,0.22); color: white; font-weight: bold; text-align: center; text-shadow: 0 1px 3px #000; z-index: 6; backdrop-filter: blur(4px); }
         .battle-banner.warning { background: rgba(122, 24, 24, 0.78); border-color: rgba(255, 112, 112, 0.4); }
         .battle-banner.seal { background: rgba(36, 73, 120, 0.76); border-color: rgba(125, 211, 252, 0.5); }
@@ -393,7 +393,7 @@
 
             <div style="display: flex; gap: 15px; justify-content: center;">
                 <button class="btn-main" style="font-size: 1.5rem; padding: 15px 50px;" onclick="startGame(0)">进入课堂</button>
-                <button id="toggle-bgm-main" class="btn-music" onclick="toggleBGMState()">🔇 音乐: 暂无</button>
+                <button id="toggle-bgm-main" class="btn-music" onclick="toggleBGMState()">🎵 音乐: 开启</button>
             </div>
         </div>
     </div>
@@ -562,135 +562,508 @@
     </div>
 
     <script>
-        // --- BGM 已移除：保留空接口，等待接入新的音乐文件 ---
-        let isBgmEnabled = false;
+        // --- 背景音乐系统：合成器配乐，支持暂停 ---
+        let isBgmEnabled = true;
         const SynthBGM = {
             ctx: null,
             isPlaying: false,
             currentLevel: 1,
             isBossMode: false,
             isSealMode: false,
-            init(audioCtx) { this.ctx = audioCtx || this.ctx; },
-            start() { this.isPlaying = false; },
-            stop() { this.isPlaying = false; },
-            setLevel(lv) { this.currentLevel = Math.max(1, Math.min(7, lv)); },
-            setBossMode(active) { this.isBossMode = !!active; },
-            setSealMode(active) { this.isSealMode = !!active; }
+            // 内部状态
+            masterGain: null,
+            padGain: null,
+            melodyGain: null,
+            padOscs: [],
+            melodyTimer: null,
+            percussionTimer: null,
+            melodyStep: 0,
+            activeMelodyNotes: [],
+
+            // 中国五声音阶（宫商角徵羽）
+            pentatonic: [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00],
+
+            init(audioCtx) {
+                this.ctx = audioCtx || this.ctx;
+                if (!this.ctx || this.masterGain) return;
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 0.09;
+                this.masterGain.connect(this.ctx.destination);
+                this.padGain = this.ctx.createGain();
+                this.padGain.gain.value = 0.45;
+                this.padGain.connect(this.masterGain);
+                this.melodyGain = this.ctx.createGain();
+                this.melodyGain.gain.value = 0.5;
+                this.melodyGain.connect(this.masterGain);
+            },
+
+            playNote(freq, startTime, duration, gainNode, volume = 0.3, type = 'triangle') {
+                if (!this.ctx) return null;
+                const osc = this.ctx.createOscillator();
+                const env = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, startTime);
+                env.gain.setValueAtTime(0, startTime);
+                env.gain.linearRampToValueAtTime(volume, startTime + 0.04);
+                env.gain.setValueAtTime(volume, startTime + duration * 0.7);
+                env.gain.linearRampToValueAtTime(0.001, startTime + duration);
+                osc.connect(env);
+                env.connect(gainNode || this.melodyGain);
+                osc.start(startTime);
+                osc.stop(startTime + duration + 0.05);
+                return osc;
+            },
+
+            startPad() {
+                this.stopPad();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const root = this.pentatonic[0] * Math.pow(2, (this.currentLevel - 1) / 7);
+                // 双层轻微失谐正弦波营造丰富氛围
+                [root, root * 1.002, root * 1.5].forEach(freq => {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now);
+                    const env = this.ctx.createGain();
+                    env.gain.setValueAtTime(0, now);
+                    env.gain.linearRampToValueAtTime(0.12, now + 1.5);
+                    osc.connect(env);
+                    env.connect(this.padGain);
+                    osc.start(now);
+                    this.padOscs.push(osc);
+                });
+            },
+
+            stopPad() {
+                this.padOscs.forEach(osc => { try { osc.stop(); } catch(e) {} });
+                this.padOscs = [];
+            },
+
+            getMelodyPattern() {
+                // 每关不同的旋律片段（五声音阶索引序列）
+                const patterns = {
+                    1: [0,2,3, 0,2,4, 0,2,3, 1,0],
+                    2: [0,3,2, 0,4,3, 1,3,2, 0],
+                    3: [3,4,5, 3,4,2, 0,3,4, 5,4,3],
+                    4: [4,3,0, 2,3,5, 4,3,2, 0,3,4],
+                    5: [5,4,3, 2,3,5, 4,5,7, 6,5,4],
+                    6: [5,6,7, 5,4,3, 2,3,5, 7,6,5],
+                    7: [0,3,5, 7,5,3, 0,4,7, 5,3,0]
+                };
+                const lv = this.isBossMode ? 7 : Math.min(7, this.currentLevel);
+                return patterns[lv] || patterns[1];
+            },
+
+            getMelodyTempo() {
+                if (this.isBossMode) return 140;
+                return 180 - this.currentLevel * 12;
+            },
+
+            startMelody() {
+                this.stopMelody();
+                if (!this.ctx) return;
+                this.melodyStep = 0;
+                const pattern = this.getMelodyPattern();
+                const tempo = this.getMelodyTempo();
+
+                const playStep = () => {
+                    if (!this.isPlaying) return;
+                    const now = this.ctx.currentTime;
+                    const noteIdx = pattern[this.melodyStep % pattern.length];
+                    const octaveShift = this.isSealMode ? 1 : 0;
+                    const freq = this.pentatonic[noteIdx] * Math.pow(2, octaveShift);
+                    const duration = 60 / tempo * 2;
+                    const vol = this.isBossMode ? 0.35 : this.isSealMode ? 0.22 : 0.28;
+                    const type = this.isSealMode ? 'sine' : this.isBossMode ? 'sawtooth' : 'triangle';
+                    const osc = this.playNote(freq, now, duration * 0.9, this.melodyGain, vol, type);
+                    if (osc) this.activeMelodyNotes.push(osc);
+                    // 清理已结束的音符
+                    this.activeMelodyNotes = this.activeMelodyNotes.filter(o => {
+                        try { return o.context && o.context.currentTime < (o.stopTime || 0); } catch(e) { return false; }
+                    });
+                    this.melodyStep++;
+                };
+
+                playStep();
+                this.melodyTimer = setInterval(playStep, 60 / tempo * 1000);
+            },
+
+            stopMelody() {
+                if (this.melodyTimer) { clearInterval(this.melodyTimer); this.melodyTimer = null; }
+                this.activeMelodyNotes.forEach(osc => { try { osc.stop(); } catch(e) {} });
+                this.activeMelodyNotes = [];
+            },
+
+            startPercussion() {
+                this.stopPercussion();
+                if (!this.ctx) return;
+                const tick = () => {
+                    if (!this.isPlaying || !this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const buf = this.ctx.createBuffer(1, Math.floor(this.ctx.sampleRate * 0.05), this.ctx.sampleRate);
+                    const data = buf.getChannelData(0);
+                    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 3) * 0.3;
+                    const src = this.ctx.createBufferSource();
+                    src.buffer = buf;
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(200 + this.currentLevel * 40, now);
+                    const env = this.ctx.createGain();
+                    env.gain.setValueAtTime(0.015, now);
+                    src.connect(filter);
+                    filter.connect(env);
+                    env.connect(this.masterGain);
+                    src.start(now);
+                };
+                const interval = this.isBossMode ? 350 : 700 - this.currentLevel * 50;
+                tick();
+                this.percussionTimer = setInterval(tick, interval);
+            },
+
+            stopPercussion() {
+                if (this.percussionTimer) { clearInterval(this.percussionTimer); this.percussionTimer = null; }
+            },
+
+            start() {
+                if (!this.ctx || this.isPlaying) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                this.isPlaying = true;
+                this.startPad();
+                this.startMelody();
+                this.startPercussion();
+            },
+
+            stop() {
+                this.isPlaying = false;
+                this.stopPad();
+                this.stopMelody();
+                this.stopPercussion();
+            },
+
+            setLevel(lv) {
+                this.currentLevel = Math.max(1, Math.min(7, lv));
+                if (this.isPlaying) {
+                    this.stopPad(); this.stopMelody(); this.stopPercussion();
+                    this.startPad(); this.startMelody(); this.startPercussion();
+                }
+            },
+
+            setBossMode(active) {
+                this.isBossMode = !!active;
+                if (this.isPlaying) {
+                    this.stopMelody(); this.stopPercussion();
+                    this.startMelody(); this.startPercussion();
+                }
+            },
+
+            setSealMode(active) {
+                this.isSealMode = !!active;
+                if (this.isPlaying) {
+                    this.melodyGain.gain.linearRampToValueAtTime(active ? 0.32 : 0.5, this.ctx.currentTime + 0.3);
+                    this.stopMelody();
+                    this.startMelody();
+                }
+            }
         };
-        
+
         function toggleBGMState() {
-            isBgmEnabled = false;
-            SynthBGM.stop();
+            isBgmEnabled = !isBgmEnabled;
+            if (isBgmEnabled) {
+                SynthBGM.start();
+            } else {
+                SynthBGM.stop();
+            }
             const btn = document.getElementById('toggle-bgm-main');
-            if (btn) btn.innerText = "🔇 音乐: 暂无";
+            if (btn) btn.innerText = isBgmEnabled ? "🎵 音乐: 开启" : "🔇 音乐: 关闭";
         }
 
         const SFX = {
             ctx: null, lastHitAt: 0, hitBurstCount: 0,
             init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); if(this.ctx.state === 'suspended') this.ctx.resume(); SynthBGM.init(this.ctx); },
-            playTone(f, t, d, v=0.07, delay=0, filterFreq=1600) {
+
+            // 噪声爆发：短促有力的冲击感
+            noiseBurst(duration, volume, delay = 0, lowpass = 6000, highpass = 200) {
+                if(!this.ctx) return;
+                const now = this.ctx.currentTime + delay;
+                const len = Math.max(1, Math.floor(this.ctx.sampleRate * duration));
+                const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+                const data = buf.getChannelData(0);
+                for(let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+                const src = this.ctx.createBufferSource(); src.buffer = buf;
+                const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(lowpass, now);
+                const hp = this.ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.setValueAtTime(highpass, now);
+                const env = this.ctx.createGain();
+                env.gain.setValueAtTime(volume, now);
+                env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+                src.connect(hp); hp.connect(lp); lp.connect(env); env.connect(this.ctx.destination);
+                src.start(now); src.stop(now + duration + 0.01);
+            },
+
+            // 低频重击：拳拳到肉的重低音
+            bassThud(freq, duration, volume, delay = 0) {
                 if(!this.ctx) return;
                 const now = this.ctx.currentTime + delay;
                 const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                const filter = this.ctx.createBiquadFilter();
-                osc.type = t;
-                osc.frequency.setValueAtTime(f, now);
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(filterFreq, now);
-                gain.gain.setValueAtTime(0.0001, now);
-                gain.gain.linearRampToValueAtTime(v, now + 0.025);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + d);
-                osc.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + d);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.35, now + duration);
+                const env = this.ctx.createGain();
+                env.gain.setValueAtTime(volume, now);
+                env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+                osc.connect(env); env.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + duration + 0.01);
             },
-            playPianoNote(freq, delay = 0, volume = 0.065, duration = 0.24, filterFreq = 1900) {
-                this.playTone(freq, 'triangle', duration, volume, delay, filterFreq);
-                this.playTone(freq * 2.01, 'sine', duration * 0.72, volume * 0.32, delay + 0.012, filterFreq + 550);
-            },
-            playChord(notes, volume = 0.045, duration = 0.32, delay = 0) {
-                notes.forEach((freq, index) => this.playPianoNote(freq, delay + index * 0.035, volume, duration));
-            },
-            playNoiseBurst(duration = 0.16, volume = 0.035, delay = 0, filterFreq = 1200, type = 'bandpass') {
+
+            // 中频敲击：清脆的打击轮廓
+            midKnock(freq, duration, volume, delay = 0) {
                 if(!this.ctx) return;
                 const now = this.ctx.currentTime + delay;
-                const buffer = this.ctx.createBuffer(1, Math.max(1, Math.floor(this.ctx.sampleRate * duration)), this.ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for(let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-                const source = this.ctx.createBufferSource();
-                const filter = this.ctx.createBiquadFilter();
-                const gain = this.ctx.createGain();
-                source.buffer = buffer;
-                filter.type = type;
-                filter.frequency.setValueAtTime(filterFreq, now);
-                filter.Q.setValueAtTime(0.8, now);
-                gain.gain.setValueAtTime(0.0001, now);
-                gain.gain.linearRampToValueAtTime(volume, now + 0.018);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-                source.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.ctx.destination);
-                source.start(now);
-                source.stop(now + duration);
+                const osc = this.ctx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.6, now + duration * 0.6);
+                const env = this.ctx.createGain();
+                env.gain.setValueAtTime(volume, now);
+                env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+                osc.connect(env); env.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + duration + 0.01);
             },
+
+            // 金属高频尾音
+            metallicRing(freq, duration, volume, delay = 0) {
+                if(!this.ctx) return;
+                const now = this.ctx.currentTime + delay;
+                const osc = this.ctx.createOscillator();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(freq, now);
+                const env = this.ctx.createGain();
+                env.gain.setValueAtTime(volume * 0.7, now);
+                env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+                const lp = this.ctx.createBiquadFilter();
+                lp.type = 'lowpass'; lp.frequency.setValueAtTime(freq * 0.8, now);
+                lp.frequency.exponentialRampToValueAtTime(freq * 0.2, now + duration);
+                osc.connect(lp); lp.connect(env); env.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + duration + 0.01);
+            },
+
             shouldPlayHit(sourceType) {
                 const now = performance.now();
-                const minGap = sourceType === 'auto' ? 62 : sourceType === 'answer' ? 34 : 22;
-                if(now - this.lastHitAt < minGap && this.hitBurstCount > 2) return false;
-                this.hitBurstCount = now - this.lastHitAt > 120 ? 0 : this.hitBurstCount + 1;
+                const minGap = sourceType === 'auto' ? 50 : sourceType === 'answer' ? 20 : 16;
+                if(now - this.lastHitAt < minGap && this.hitBurstCount > 3) return false;
+                this.hitBurstCount = now - this.lastHitAt > 100 ? 0 : this.hitBurstCount + 1;
                 this.lastHitAt = now;
                 return true;
             },
+
+            // 核心打击音效：瞬态噪声 + 低频重击 + 中频敲击 + 高频尾音 = 富有层次的打击感
             hit(levelData, side = 'right', sourceType = 'auto') {
                 if(!this.ctx || !this.shouldPlayHit(sourceType)) return;
                 const id = levelData && levelData.id ? levelData.id : 1;
-                const power = sourceType === 'ultimate' ? 1.32 : sourceType === 'answer' ? 1.16 : 1;
-                const sideShift = side === 'left' ? 0.94 : 1;
-                const vol = 0.038 * power;
+                const power = sourceType === 'ultimate' ? 1.5 : sourceType === 'answer' ? 1.3 : 1;
+                const v = (vol) => vol * power * 0.85;
+                const baseFreq = 60 + id * 15; // 每关低频基底递增
+
                 switch(id) {
-                    case 1:
-                        this.playPianoNote(196.00 * sideShift, 0, vol * 0.92, 0.12, 850);
-                        this.playPianoNote(783.99 * sideShift, 0.035, vol * 0.55, 0.16, 2200);
+                    case 1: // 灵狐 - 轻灵打击
+                        this.noiseBurst(0.04, v(0.22), 0, 4000, 300);
+                        this.bassThud(baseFreq, 0.09, v(0.28));
+                        this.midKnock(280, 0.06, v(0.16), 0.01);
+                        this.metallicRing(1200, 0.1, v(0.1), 0.015);
                         break;
-                    case 2:
-                        this.playPianoNote(987.77 * sideShift, 0, vol * 0.55, 0.18, 2600);
-                        this.playPianoNote(146.83, 0.025, vol * 0.8, 0.2, 700);
+                    case 2: // 雷纹虎 - 雷鸣重击
+                        this.noiseBurst(0.05, v(0.28), 0, 3500, 250);
+                        this.bassThud(baseFreq, 0.1, v(0.35));
+                        this.midKnock(220, 0.07, v(0.2), 0.008);
+                        this.metallicRing(900, 0.12, v(0.13), 0.02);
                         break;
-                    case 3:
-                        this.playPianoNote(392.00 * sideShift, 0, vol * 0.75, 0.14, 1600);
-                        this.playPianoNote(587.33 * sideShift, 0.05, vol * 0.62, 0.2, 1900);
-                        this.playNoiseBurst(0.18, vol * 0.42, 0.02, 1050, 'bandpass');
+                    case 3: // 独角兽 - 星光净化
+                        this.noiseBurst(0.04, v(0.24), 0, 5000, 400);
+                        this.bassThud(baseFreq, 0.08, v(0.26));
+                        this.midKnock(360, 0.05, v(0.18), 0.012);
+                        this.metallicRing(1600, 0.09, v(0.12), 0.01);
                         break;
-                    case 4:
-                        [329.63, 493.88, 659.25].forEach((freq, index) => this.playPianoNote(freq * sideShift, index * 0.045, vol * 0.6, 0.13, 2100));
-                        this.playNoiseBurst(0.12, vol * 0.32, 0.04, 900, 'lowpass');
+                    case 4: // 小龙 - 云海冲击
+                        this.noiseBurst(0.06, v(0.3), 0, 3000, 200);
+                        this.bassThud(baseFreq, 0.11, v(0.38));
+                        this.midKnock(200, 0.08, v(0.22), 0.005);
+                        this.metallicRing(700, 0.14, v(0.15), 0.025);
                         break;
-                    case 5:
-                        this.playPianoNote(164.81 * sideShift, 0, vol * 0.95, 0.18, 780);
-                        this.playPianoNote(659.25 * sideShift, 0.045, vol * 0.6, 0.14, 2300);
-                        this.playNoiseBurst(0.12, vol * 0.34, 0.02, 1350, 'highpass');
+                    case 5: // 狮王 - 火焰咆哮
+                        this.noiseBurst(0.07, v(0.35), 0, 2500, 150);
+                        this.bassThud(baseFreq, 0.12, v(0.45));
+                        this.midKnock(180, 0.09, v(0.25), 0.006);
+                        this.metallicRing(550, 0.16, v(0.18), 0.03);
                         break;
-                    case 6:
-                        this.playChord([196.00, 246.94, 329.63].map(freq => freq * sideShift), vol * 0.42, 0.26);
-                        this.playPianoNote(587.33 * sideShift, 0.12, vol * 0.44, 0.36, 1700);
+                    case 6: // 巨鲸 - 深海共鸣
+                        this.noiseBurst(0.08, v(0.3), 0, 2000, 120);
+                        this.bassThud(baseFreq * 0.8, 0.14, v(0.5));
+                        this.bassThud(baseFreq * 1.5, 0.1, v(0.2), 0.02);
+                        this.midKnock(150, 0.07, v(0.2), 0.01);
+                        this.metallicRing(400, 0.2, v(0.14), 0.035);
                         break;
-                    case 7:
-                        this.playPianoNote(1046.50 * sideShift, 0, vol * 0.48, 0.22, 2800);
-                        this.playPianoNote(392.00 * sideShift, 0.055, vol * 0.82, 0.28, 1500);
-                        this.playPianoNote(659.25 * sideShift, 0.12, vol * 0.52, 0.26, 2200);
+                    case 7: // 神龙 - 龙息天降
+                        this.noiseBurst(0.09, v(0.38), 0, 1800, 100);
+                        this.bassThud(baseFreq * 0.7, 0.16, v(0.55));
+                        this.bassThud(baseFreq * 2, 0.12, v(0.25), 0.015);
+                        this.midKnock(130, 0.08, v(0.28), 0.008);
+                        this.metallicRing(300, 0.22, v(0.2), 0.04);
                         break;
                     default:
-                        this.playPianoNote(523.25 * sideShift, 0, vol, 0.18);
+                        this.noiseBurst(0.05, v(0.25), 0, 3500, 250);
+                        this.bassThud(baseFreq, 0.1, v(0.32));
+                        this.midKnock(250, 0.06, v(0.18), 0.01);
                 }
             },
-            tick() { this.playChord([293.66, 392.00], 0.032, 0.18); },
-            success() { this.playChord([523.25, 659.25, 783.99], 0.052, 0.34); this.playPianoNote(1046.50, 0.2, 0.032, 0.38); },
-            fail() { this.playPianoNote(220.00, 0, 0.052, 0.24, 900); this.playPianoNote(164.81, 0.12, 0.04, 0.34, 760); },
-            seal() { this.playChord([523.25, 659.25, 783.99], 0.045, 0.46); this.playPianoNote(1046.50, 0.24, 0.04, 0.62, 2500); },
-            dragonRoar() { this.playChord([130.81, 196.00, 261.63], 0.052, 0.58); this.playPianoNote(392.00, 0.18, 0.045, 0.7, 1200); }
+
+            // 受击警告
+            tick() {
+                if(!this.ctx) return;
+                const now = this.ctx.currentTime;
+                this.noiseBurst(0.06, 0.2, 0, 2000, 500);
+                this.bassThud(90, 0.12, 0.25);
+                this.midKnock(400, 0.07, 0.15, 0.005);
+            },
+
+            // 答题成功 - 上行胜利音
+            success() {
+                if(!this.ctx) return;
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                    const env = this.ctx.createGain();
+                    env.gain.setValueAtTime(0, now + i * 0.08);
+                    env.gain.linearRampToValueAtTime(0.12, now + i * 0.08 + 0.03);
+                    env.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.08 + 0.25);
+                    osc.connect(env); env.connect(this.ctx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.3);
+                });
+                // 结尾叮声
+                const bell = this.ctx.createOscillator();
+                bell.type = 'sine';
+                bell.frequency.setValueAtTime(1046.5, now + 0.28);
+                const bellEnv = this.ctx.createGain();
+                bellEnv.gain.setValueAtTime(0, now + 0.28);
+                bellEnv.gain.linearRampToValueAtTime(0.08, now + 0.3);
+                bellEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+                bell.connect(bellEnv); bellEnv.connect(this.ctx.destination);
+                bell.start(now + 0.28); bell.stop(now + 0.65);
+            },
+
+            // 答题失败 - 下行低沉音
+            fail() {
+                if(!this.ctx) return;
+                const now = this.ctx.currentTime;
+                [330, 262, 196].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.1);
+                    const env = this.ctx.createGain();
+                    env.gain.setValueAtTime(0, now + i * 0.1);
+                    env.gain.linearRampToValueAtTime(0.08, now + i * 0.1 + 0.02);
+                    env.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.1 + 0.22);
+                    const lp = this.ctx.createBiquadFilter();
+                    lp.type = 'lowpass'; lp.frequency.setValueAtTime(800, now);
+                    osc.connect(lp); lp.connect(env); env.connect(this.ctx.destination);
+                    osc.start(now + i * 0.1);
+                    osc.stop(now + i * 0.1 + 0.25);
+                });
+                this.noiseBurst(0.1, 0.12, 0.35, 600, 100);
+            },
+
+            // 结界展开 - 魔法升腾
+            seal() {
+                if(!this.ctx) return;
+                const now = this.ctx.currentTime;
+                // 上升音阶
+                [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.1);
+                    const env = this.ctx.createGain();
+                    env.gain.setValueAtTime(0, now + i * 0.1);
+                    env.gain.linearRampToValueAtTime(0.09, now + i * 0.1 + 0.05);
+                    env.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.1 + 0.5);
+                    osc.connect(env); env.connect(this.ctx.destination);
+                    osc.start(now + i * 0.1); osc.stop(now + i * 0.1 + 0.55);
+                });
+                // 闪烁噪声
+                for(let i = 0; i < 3; i++) {
+                    this.noiseBurst(0.08, 0.06, 0.4 + i * 0.15, 5000 + i * 2000, 800);
+                }
+            },
+
+            // 龙咆哮 - 低沉震撼
+            dragonRoar() {
+                if(!this.ctx) return;
+                const now = this.ctx.currentTime;
+                // 深层低频持续
+                [55, 65.4, 82.4].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.15);
+                    osc.frequency.linearRampToValueAtTime(freq * 0.6, now + i * 0.15 + 0.8);
+                    const env = this.ctx.createGain();
+                    env.gain.setValueAtTime(0, now + i * 0.15);
+                    env.gain.linearRampToValueAtTime(0.06, now + i * 0.15 + 0.08);
+                    env.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.15 + 0.9);
+                    const lp = this.ctx.createBiquadFilter();
+                    lp.type = 'lowpass'; lp.frequency.setValueAtTime(250, now);
+                    osc.connect(lp); lp.connect(env); env.connect(this.ctx.destination);
+                    osc.start(now + i * 0.15); osc.stop(now + i * 0.15 + 1.0);
+                });
+                this.noiseBurst(0.25, 0.18, 0.1, 400, 50);
+                this.noiseBurst(0.15, 0.12, 0.3, 300, 60);
+            },
+
+            // 大招爆发音效：瞬间震撼冲击
+            burstImpact() {
+                if(!this.ctx) return;
+                const now = this.ctx.currentTime;
+                // 三重低频同时爆发，瞬间冲击
+                [65, 98, 130].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 0.25, now + 0.25);
+                    const env = this.ctx.createGain();
+                    env.gain.setValueAtTime(0.25, now + 0.003);
+                    env.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+                    osc.connect(env); env.connect(this.ctx.destination);
+                    osc.start(now); osc.stop(now + 0.3);
+                });
+                // 瞬态噪声冲击
+                this.noiseBurst(0.06, 0.3, 0, 4000, 150);
+                this.noiseBurst(0.1, 0.2, 0.02, 2000, 80);
+                // 高频闪亮尾音
+                const bell = this.ctx.createOscillator();
+                bell.type = 'sine';
+                bell.frequency.setValueAtTime(880, now + 0.04);
+                bell.frequency.linearRampToValueAtTime(1320, now + 0.3);
+                const bellEnv = this.ctx.createGain();
+                bellEnv.gain.setValueAtTime(0.08, now + 0.05);
+                bellEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+                bell.connect(bellEnv); bellEnv.connect(this.ctx.destination);
+                bell.start(now + 0.04); bell.stop(now + 0.4);
+            },
+
+            playChord(notes, volume = 0.045, duration = 0.32, delay = 0) {
+                if(!this.ctx) return;
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay + index * 0.035);
+                    const env = this.ctx.createGain();
+                    env.gain.setValueAtTime(0, this.ctx.currentTime + delay + index * 0.035);
+                    env.gain.linearRampToValueAtTime(volume, this.ctx.currentTime + delay + index * 0.035 + 0.02);
+                    env.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + delay + index * 0.035 + duration);
+                    osc.connect(env); env.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + delay + index * 0.035);
+                    osc.stop(this.ctx.currentTime + delay + index * 0.035 + duration + 0.05);
+                });
+            }
         };
 
         function escapeHtml(value) {
@@ -865,670 +1238,125 @@
         }
 
                 // --- 英语题库（外研新交际1-2年级 + 人教版PEP 3-4年级）---
+        // --- 二年级下册词库（新交际英语）---
         const vocabBySemester = {
-            // 一上：外研新交际基础词汇
-            '1a': [
-                'one(一)',
-                'two(二)',
-                'three(三)',
-                'four(四)',
-                'five(五)',
-                'six(六)',
-                'seven(七)',
-                'number(数字；号码)',
-                'classroom(教室)',
-                'teacher(老师)',
-                'school(学校)',
-                'desk(课桌)',
-                'chair(椅子)',
-                'door(门)',
-                'window(窗户)',
-                'blackboard(黑板)',
-                'book(书)',
-                'pencil(铅笔)',
-                'pen(钢笔；笔)',
-                'home(家)',
-                'house(房子)',
-                'room(房间)',
-                'table(桌子)',
-                'bed(床)',
-                'sofa(沙发)',
-                'tidy(整洁的)',
-                'clean(干净的)',
-                'live(居住)',
-                'next(下一个；旁边的)',
-                'day(一天)',
-                'amazing(令人惊奇的)'
+            '2b-u1': [
+                'by bus(乘公交车)', 'by car(乘小汽车)', 'by train(乘火车)', 'by plane(乘飞机)',
+                'bus(公交车)', 'car(汽车)', 'train(火车)', 'plane(飞机)',
+                'zoo(动物园)', 'school(学校)', 'park(公园)', 'farm(农场)', 'beach(海滩)',
+                'by(通过)', 'Chinese(中国的)', 'new(新的)', 'see(看望)'
             ],
-            // 一下：外研新交际进阶词汇
-            '1b': [
-                'body(身体)',
-                'head(头)',
-                'hand(手)',
-                'leg(腿)',
-                'foot(脚)',
-                'look(看)',
-                'open(打开)',
-                'read(读)',
-                'run(跑)',
-                'move(移动)',
-                'kick(踢)',
-                'box(拳击)',
-                'draw(画)',
-                'dance(跳舞)',
-                'sing(唱歌)',
-                'make(制作)',
-                'show(展示)',
-                'turn(转动；轮到)',
-                'help(帮助)',
-                'big(大的)',
-                'old(旧的；老的)',
-                'very(非常)',
-                'tall(高的)',
-                'strong(强壮的)',
-                'fast(快的)',
-                'new(新的)',
-                'yummy(美味的)',
-                'sweet(甜的)',
-                'lucky(幸运的)',
-                'fun(有趣的)',
-                'food(食物)'
+            '2b-u2': [
+                'doctor(医生)', 'nurse(护士)', 'driver(司机)', 'farmer(农民)', 'worker(工人)', 'teacher(教师)',
+                'job(工作)', 'grandpa(爷爷)', 'grandma(奶奶)', 'dad(爸爸)', 'mum(妈妈)',
+                'orange(橙子)', 'pen(钢笔)', 'queen(女王)', 'our(我们的)'
             ],
-            // 二上：外研新交际中级词汇
-            '2a': [
-                'noodle(面条)',
-                'cake(蛋糕)',
-                'apple(苹果)',
-                'dinner(晚餐)',
-                'hungry(饿的)',
-                'angry(生气的)',
-                'sad(伤心的)',
-                'tired(累的)',
-                'OK(好的；可以)',
-                'season(季节)',
-                'spring(春天)',
-                'summer(夏天)',
-                'autumn(秋天)',
-                'winter(冬天)',
-                'year(年)',
-                'snow(雪)',
-                'car(小汽车)',
-                'bus(公共汽车)',
-                'plane(飞机)',
-                'train(火车)',
-                'by(乘；通过)',
-                'student(学生)',
-                'driver(司机)',
-                'doctor(医生)',
-                'worker(工人)',
-                'farmer(农民)',
-                'nurse(护士)',
-                'job(工作；职业)',
-                'farm(农场)',
-                'sheep(绵羊)'
+            '2b-u3': [
+                'cow(奶牛)', 'chicken(鸡)', 'sheep(绵羊)',
+                'tree(树)', 'flower(花)', 'grass(草)',
+                'farm(农场)', 'feed(喂养)', 'field(田地)', 'farmer(农民)',
+                'help(帮助)', 'look at(看)', 'welcome(欢迎)', 'yes(是)',
+                'rabbit(兔子)', 'sister(姐妹)'
             ],
-            // 二下：外研新交际高级词汇
-            '2b': [
-                'chicken(鸡；小鸡)',
-                'grass(草)',
-                'child(孩子)',
-                'balloon(气球)',
-                'robot(机器人)',
-                'basketball(篮球)',
-                'football(足球)',
-                'card(卡片)',
-                'kite(风筝)',
-                'hat(帽子)',
-                'I(我)',
-                'you(你；你们)',
-                'he(他)',
-                'she(她)',
-                'it(它)',
-                'this(这个)',
-                'that(那个)',
-                'my(我的)',
-                'her(她的)',
-                'our(我们的)',
-                'what(什么)',
-                'please(请)',
-                'thank(感谢)',
-                'some(一些)',
-                'lot(许多)',
-                'up(向上)',
-                'for(为了；给)',
-                'well(好地)',
-                'Chinese(中文；中国的)',
-                'queen(女王)'
+            '2b-u4': [
+                'Chinese(语文)', 'English(英语)', 'maths(数学)', 'music(音乐)', 'PE(体育)', 'art(美术)',
+                'class(课)', 'student(学生)',
+                'have(有)', 'like(喜欢)', 'all(全部)', 'great(非常好的)',
+                'help(帮助)', 'show(展示)', 'run(跑)',
+                'tiger(老虎)', 'umbrella(雨伞)', 'van(小巴)'
             ],
-            // 三年级：人教版PEP
-            'g3': [
-                'ruler(尺子)',
-                'pencil(铅笔)',
-                'eraser(橡皮)',
-                'crayon(蜡笔)',
-                'bag(书包)',
-                'pen(钢笔)',
-                'pencil box(铅笔盒)',
-                'book(书)',
-                'face(脸)',
-                'ear(耳朵)',
-                'eye(眼睛)',
-                'nose(鼻子)',
-                'mouth(嘴)',
-                'arm(胳膊)',
-                'hand(手)',
-                'head(头)',
-                'body(身体)',
-                'leg(腿)',
-                'foot(脚)',
-                'red(红色)',
-                'green(绿色)',
-                'yellow(黄色)',
-                'blue(蓝色)',
-                'black(黑色)',
-                'brown(棕色)',
-                'white(白色)',
-                'orange(橙色)',
-                'duck(鸭子)',
-                'pig(猪)',
-                'cat(猫)',
-                'bear(熊)',
-                'dog(狗)',
-                'elephant(大象)',
-                'monkey(猴子)',
-                'bird(鸟)',
-                'tiger(老虎)',
-                'panda(熊猫)',
-                'zoo(动物园)',
-                'bread(面包)',
-                'juice(果汁)',
-                'egg(鸡蛋)',
-                'milk(牛奶)',
-                'water(水)',
-                'cake(蛋糕)',
-                'fish(鱼)',
-                'rice(米饭)',
-                'one(一)',
-                'two(二)',
-                'three(三)',
-                'four(四)',
-                'five(五)',
-                'six(六)',
-                'seven(七)',
-                'eight(八)',
-                'nine(九)',
-                'ten(十)',
-                'hello(你好)',
-                'hi(嗨)',
-                'goodbye(再见)',
-                'bye(再见)',
-                'OK(好的)',
-                'mum(妈妈)',
-                'school(学校)',
-                'UK(英国)',
-                'Canada(加拿大)',
-                'USA(美国)',
-                'China(中国)',
-                'teacher(教师)',
-                'student(学生)',
-                'pupil(小学生)',
-                'he(他)',
-                'she(她)',
-                'boy(男孩)',
-                'girl(女孩)',
-                'man(男人)',
-                'woman(女人)',
-                'friend(朋友)',
-                'father(父亲)',
-                'dad(爸爸)',
-                'mother(母亲)',
-                'sister(姐；妹)',
-                'brother(兄；弟)',
-                'grandmother(祖母；外祖母)',
-                'grandma(奶奶；外婆)',
-                'grandfather(祖父；外祖父)',
-                'grandpa(爷爷；外公)',
-                'family(家庭)'
+            '2b-u5': [
+                'sing(唱歌)', 'dance(跳舞)', 'draw(画画)', 'swim(游泳)',
+                'play football(踢足球)', 'football(足球)', 'jump(跳)', 'kick(踢)', 'run fast(跑得快)',
+                'can(能)', 'well(好地)',
+                'do paper folding(折纸)', 'do tai chi(打太极)', 'play Chinese chess(下象棋)', 'play the guzheng(弹古筝)',
+                'window(窗户)', 'box(盒子)'
             ],
-            // 四年级：人教版PEP
-            'g4': [
-                'thin(瘦的)',
-                'fat(胖的)',
-                'tall(高的)',
-                'short(矮的；短的)',
-                'long(长的)',
-                'small(小的)',
-                'big(大的)',
-                'tail(尾巴)',
-                'has(有)',
-                'on(在……上面)',
-                'in(在……里面)',
-                'under(在……下面)',
-                'desk(课桌)',
-                'chair(椅子)',
-                'map(地图)',
-                'cap(帽子)',
-                'ball(球)',
-                'car(小汽车)',
-                'boat(小船)',
-                'apple(苹果)',
-                'pear(梨)',
-                'orange(橙子)',
-                'banana(香蕉)',
-                'watermelon(西瓜)',
-                'strawberry(草莓)',
-                'grape(葡萄)',
-                'fruit(水果)',
-                'eleven(十一)',
-                'twelve(十二)',
-                'thirteen(十三)',
-                'fourteen(十四)',
-                'fifteen(十五)',
-                'sixteen(十六)',
-                'seventeen(十七)',
-                'eighteen(十八)',
-                'nineteen(十九)',
-                'twenty(二十)',
-                'classroom(教室)',
-                'window(窗户)',
-                'blackboard(黑板)',
-                'light(电灯)',
-                'picture(图画；照片)',
-                'door(门)',
-                'teacher’s desk(讲台)',
-                'computer(计算机)',
-                'fan(风扇)',
-                'wall(墙壁)',
-                'floor(地板)',
-                'clean(打扫；干净的)',
-                'near(在……附近)',
-                'schoolbag(书包)',
-                'maths book(数学书)',
-                'English book(英语书)',
-                'Chinese book(语文书)',
-                'storybook(故事书)',
-                'notebook(笔记本)',
-                'candy(糖果)',
-                'toy(玩具)',
-                'key(钥匙)',
-                'strong(强壮的)',
-                'friendly(友好的)',
-                'quiet(安静的)',
-                'hair(头发)',
-                'shoe(鞋)',
-                'glasses(眼镜)',
-                'his(他的)',
-                'her(她的)',
-                'right(正确的；对的)',
-                'bedroom(卧室)',
-                'living room(客厅)',
-                'study(书房)',
-                'kitchen(厨房)',
-                'bathroom(浴室；洗手间)',
-                'bed(床)',
-                'phone(电话)',
-                'table(桌子)',
-                'sofa(沙发)',
-                'fridge(冰箱)',
-                'beef(牛肉)',
-                'chicken(鸡肉)',
-                'noodles(面条)',
-                'soup(汤)',
-                'vegetable(蔬菜)',
-                'chopsticks(筷子)',
-                'bowl(碗)',
-                'fork(餐叉)'
-            ],
-            // 五年级：人教版PEP
-            'g5': [
-                'knife(刀)',
-                'spoon(勺子)',
-                'dinner(正餐)',
-                'parents(父母)',
-                'cousin(同辈表亲；堂亲)',
-                'uncle(叔叔；舅舅；伯伯)',
-                'aunt(姑姑；婶婶；阿姨)',
-                'baby brother(小弟弟)',
-                'doctor(医生)',
-                'cook(厨师)',
-                'driver(司机)',
-                'farmer(农民)',
-                'nurse(护士)',
-                'football player(足球运动员)',
-                'job(工作)',
-                'first floor(一楼)',
-                'second floor(二楼)',
-                'teachers’ office(教师办公室)',
-                'library(图书馆)',
-                'playground(操场)',
-                'computer room(计算机房)',
-                'art room(美术教室)',
-                'music room(音乐教室)',
-                'homework(作业)',
-                'breakfast(早餐)',
-                'lunch(午餐)',
-                'dinner(晚餐)',
-                'English class(英语课)',
-                'music class(音乐课)',
-                'PE class(体育课)',
-                'get up(起床)',
-                'go to school(去上学)',
-                'go home(回家)',
-                'go to bed(上床睡觉)',
-                'over(结束)',
-                'now(现在)',
-                'o’clock(……点钟)',
-                'cold(寒冷的)',
-                'cool(凉爽的)',
-                'warm(温暖的)',
-                'hot(热的)',
-                'sunny(晴朗的)',
-                'windy(多风的)',
-                'cloudy(多云的)',
-                'snowy(下雪的)',
-                'rainy(下雨的)',
-                'weather(天气)',
-                'outside(在户外)',
-                'clothes(衣服)',
-                'hat(帽子)',
-                'pants(裤子)',
-                'dress(连衣裙)',
-                'skirt(女裙)',
-                'coat(外套)',
-                'sweater(毛衣)',
-                'sock(短袜)',
-                'shorts(短裤)',
-                'jacket(夹克衫)',
-                'shirt(衬衫)',
-                'yours(你的；你们的)',
-                'mine(我的)',
-                'horse(马)',
-                'cow(母牛；奶牛)',
-                'sheep(绵羊)',
-                'hen(母鸡)',
-                'goat(山羊)',
-                'animal(动物)',
-                'carrot(胡萝卜)',
-                'tomato(西红柿)',
-                'potato(土豆)',
-                'green beans(豆角)',
-                'farm(农场)',
-                'garden(花园)',
-                'glove(手套)',
-                'scarf(围巾)',
-                'umbrella(雨伞)',
-                'sunglasses(太阳镜)',
-                'pretty(美观的)',
-                'expensive(昂贵的)',
-                'cheap(便宜的)',
-                'nice(好的)',
-                'try on(试穿)',
-                'size(尺码)',
-                'of course(当然)',
-                'too(太；也)',
-                'just(正好；恰好)'
+            '2b-u6': [
+                'Monday(星期一)', 'Tuesday(星期二)', 'Wednesday(星期三)', 'Thursday(星期四)',
+                'Friday(星期五)', 'Saturday(星期六)', 'Sunday(星期日)',
+                'week(周)', 'every day(每天)',
+                'box(盒子)', 'paper(纸)', 'coloured paper(彩纸)',
+                'draw pictures(画画)', 'go to the zoo(去动物园)', 'play football(踢足球)', 'swim(游泳)',
+                'sorry(抱歉)', 'OK(好的)', 'Thank you(谢谢)'
             ]
         };
 
+        // --- 二年级下册句型库（新交际英语）---
         const sentsBySemester = {
-            // 一上：外研新交际基础句型
-            '1a': [
-                'Thank you.',
-                'What’s this?',
-                'It’s a book.',
-                'It’s a pencil.',
-                'This is a desk.',
-                'That is a chair.',
-                'Look at the blackboard.',
-                'Open your book.',
-                'Read the book.',
-                'Show me your pencil.',
-                'One, two, three.',
-                'It’s number one.',
-                'How many books?',
-                'Three books.',
-                'It’s big.',
-                'It’s old.',
-                'It’s new.',
-                'It’s very big.',
-                'She is tall.',
-                'He is strong.',
-                'She is fast.'
-            ],
-            // 一下：外研新交际进阶句型
-            '1b': [
-                'This is my home.',
-                'This is my house.',
-                'This is my room.',
-                'This is a bed.',
-                'This is a sofa.',
-                'The room is clean.',
-                'The room is tidy.',
-                'This is my head.',
-                'This is my hand.',
-                'This is my leg.',
-                'This is my foot.',
-                'Touch your head.',
-                'Move your hand.',
-                'I can run.',
-                'I can move.',
-                'I can draw.',
-                'I can dance.',
-                'I can sing.',
-                'I can kick.',
-                'I can play football.'
-            ],
-            // 二上：外研新交际中级句型
-            '2a': [
-                'I’m hungry.',
-                'I want noodles.',
-                'I want cake.',
-                'I like apples.',
-                'I like cake.',
-                'It’s yummy.',
-                'It’s sweet.',
-                'I’m happy.',
-                'I’m sad.',
-                'I’m angry.',
-                'I’m tired.',
-                'It’s spring.',
-                'It’s summer.',
-                'It’s autumn.',
-                'It’s winter.',
-                'I like spring.',
-                'I like summer.',
-                'It’s snowing.',
-                'Let’s make a card.',
-                'Let’s make a kite.'
-            ],
-            // 二下：外研新交际高级句型
-            '2b': [
-                'Show me your card.',
-                'Show me your kite.',
-                'I go by car.',
+            '2b-u1': [
                 'I go by bus.',
-                'I go by plane.',
+                'I go by car.',
                 'I go by train.',
-                'I go to school by bus.',
-                'He is a doctor.',
-                'She is a nurse.',
-                'He is a driver.',
-                'She is a farmer.',
+                'I go by plane.',
+                'I go to the zoo.',
+                'I go to the park.',
+                'I go to school by car.',
+                'Three, two, one. Let\'s go!',
+                'It\'s spring. I go to the zoo.'
+            ],
+            '2b-u2': [
+                'This is my grandpa.',
+                'This is my grandma.',
+                'This is my dad.',
+                'This is my mum.',
                 'He is a worker.',
-                'I am a student.',
-                'What’s his job?',
-                'What’s her job?',
-                'This is a farm.',
-                'I can see sheep.',
-                'I can see chickens.',
-                'The sheep is on the grass.',
-                'The chicken is on the farm.'
+                'He is a teacher.',
+                'He is a doctor.',
+                'She is a farmer.',
+                'She is a nurse.',
+                'I\'m a driver. We love our jobs!'
             ],
-            // 三年级：人教版PEP句型
-            'g3': [
-                'I’m Wu Binbin.',
-                'What’s your name?',
-                'My name’s John.',
-                'Nice to meet you.',
-                'Nice to meet you, too.',
-                'I have a ruler.',
-                'I have an eraser.',
-                'Show me your pen.',
-                'Open your pencil box.',
-                'Carry your bag.',
-                'What colour is it?',
-                'It’s red.',
-                'Colour it brown.',
-                'I see green.',
-                'Look at me!',
-                'This is my face.',
-                'This is my nose.',
-                'Touch your head.',
-                'Clap your hands.',
-                'Stamp your foot.',
-                'What’s this?',
-                'It’s a duck.',
-                'What’s that?',
-                'It’s a tiger.',
-                'Act like a monkey.',
-                'I like pandas.',
-                'I’d like some juice, please.',
-                'Have some bread.',
-                'Can I have some water, please?',
-                'Here you are.',
-                'You’re welcome.',
-                'How old are you?',
-                'I’m six years old.',
-                'How many plates?',
-                'This one, please.',
-                'Where are you from?',
-                'I’m from China.',
-                'I’m from the UK.',
-                'This is Amy.',
-                'She’s a student.',
-                'He’s my friend.',
-                'Who’s that man?',
-                'He’s my father.',
-                'Who’s that woman?',
-                'She’s my mother.',
-                'Is she your mother?',
-                'Yes, she is.',
-                'No, she isn’t.',
-                'Look at that giraffe.'
+            '2b-u3': [
+                'Welcome, children!',
+                'Let\'s feed them.',
+                'We have some grass.',
+                'Let\'s feed the cows and sheep!',
+                'It has some trees.',
+                'It has some flowers.',
+                'My farm has trees and grass.',
+                'My farm has sheep and chickens.'
             ],
-            // 四年级：人教版PEP句型
-            'g4': [
-                'It’s so tall.',
-                'It has a long nose.',
-                'It has small eyes.',
-                'It has a short tail.',
-                'Where is my ruler?',
-                'It’s in your desk.',
-                'It’s on the chair.',
-                'It’s under the book.',
-                'Is it in your bag?',
-                'Yes, it is. / No, it isn’t.',
-                'Do you like pears?',
-                'Yes, I do.',
-                'No, I don’t.',
-                'I like apples.',
-                'I don’t like bananas.',
-                'Have some grapes.',
-                'What’s in the classroom?',
-                'One blackboard, one TV, many desks and chairs.',
-                'Where is it?',
-                'It’s near the window.',
-                'Let’s clean the classroom.',
-                'Let me clean the teacher’s desk.',
-                'What’s in your schoolbag?',
-                'An English book, a maths book and three storybooks.',
-                'It’s blue and white.',
-                'I have a new schoolbag.',
-                'I have a good friend.',
-                'He’s tall and strong.',
-                'She’s quiet.',
-                'He has glasses.',
-                'Her name is Amy.',
-                'His name is Zhang Peng.',
-                'Where is she?',
-                'She’s in the kitchen.',
-                'Where are the keys?',
-                'They’re on the table.',
-                'Are they near the phone?',
-                'Yes, they are. / No, they aren’t.',
-                'Is she in the living room?',
-                'What would you like?',
-                'I’d like some soup and bread, please.',
-                'Help yourself.',
-                'Would you like a knife and fork?',
-                'No, thanks.',
-                'I can use chopsticks.',
-                'How many people are there in your family?',
-                'My family has six people.',
-                'Is this your uncle?'
+            '2b-u4': [
+                'I have art and music.',
+                'I have Chinese and maths.',
+                'I like PE now.',
+                'I like Chinese and PE.',
+                'Let me show you.',
+                'You can do it!',
+                'Chinese, English and maths. I like them all!',
+                'But I have PE. I don\'t like it.'
             ],
-            // 五年级：人教版PEP句型
-            'g5': [
-                'Yes, it is.',
-                'What’s your aunt’s job?',
-                'She’s a nurse.',
-                'He’s a driver.',
-                'Where’s the teachers’ office?',
-                'It’s on the second floor.',
-                'Is this the teachers’ office?',
-                'Do you have a library?',
-                'Yes, we do.',
-                'This way, please.',
-                'What time is it?',
-                'It’s 6 o’clock.',
-                'It’s time for breakfast.',
-                'It’s time to get up.',
-                'It’s time to go to school.',
-                'School is over.',
-                'What’s the weather like?',
-                'It’s cold.',
-                'It’s sunny.',
-                'It’s rainy.',
-                'Can I go outside now?',
-                'Yes, you can.',
-                'No, you can’t.',
-                'Be careful!',
-                'Are these yours?',
-                'Yes, they are.',
-                'No, they aren’t.',
-                'Is this John’s?',
-                'No, it isn’t.',
-                'Whose coat is this?',
-                'It’s mine.',
-                'They’re Chen Jie’s.',
-                'What are these?',
-                'They’re tomatoes.',
-                'Are these carrots?',
-                'What are those?',
-                'They’re horses.',
-                'Are they hens?',
-                'Can I help you?',
-                'Yes. These shoes are nice.',
-                'Can I try them on?',
-                'Of course.',
-                'What size?',
-                'They’re too small.',
-                'How much is this skirt?',
-                'It’s $89.',
-                'How much are these pants?',
-                'They’re 100 yuan.'
+            '2b-u5': [
+                'What can you do?',
+                'I can sing.',
+                'I can dance.',
+                'I can swim.',
+                'I can draw.',
+                'I can play football.',
+                'Can you jump? Yes, I can.',
+                'I can play football well.',
+                'Good job!'
+            ],
+            '2b-u6': [
+                'Can I have some boxes?',
+                'Can I have some coloured paper?',
+                'Let\'s draw pictures on Thursday.',
+                'Let\'s play football on Friday.',
+                'Let\'s go to the zoo on Saturday.',
+                'This is my week. On Monday, I have Chinese, PE, English and maths.',
+                'Saturday and Sunday, time to play!'
             ]
         };
         function getActiveSemesters() {
             const level = currentLevelIndex + 1;
             const semesters = [];
-            if (level >= 1) semesters.push('2b');
-            if (level >= 2) semesters.push('2a');
-            if (level >= 3) semesters.push('1b');
-            if (level >= 4) semesters.push('1a');
-            if (level >= 5) semesters.push('g3');
-            if (level >= 6) semesters.push('g4');
-            if (level >= 7) semesters.push('g5');
+            if (level >= 1) semesters.push('2b-u1');
+            if (level >= 2) semesters.push('2b-u2');
+            if (level >= 3) semesters.push('2b-u3');
+            if (level >= 4) semesters.push('2b-u4');
+            if (level >= 5) semesters.push('2b-u5');
+            if (level >= 6) semesters.push('2b-u6');
             return semesters;
         }
 
@@ -1541,8 +1369,8 @@
         }
         
         let bags = { 'vocab':[], 'sents':[], 'typeBag':[] };
-        let activeVocabCache = null;
-        let activeSentsCache = null;
+        let usedVocabSet = new Set();
+        let usedSentsSet = new Set();
         let groupBag = [];
         let lastTypePoolKey = '';
 
@@ -1551,9 +1379,35 @@
             return groupBag.pop();
         }
 
+        // 抽取不重复条目，按单元交替覆盖
         function getShuffledItem(bagName, sourceArr) {
-            if(bags[bagName].length === 0) bags[bagName] = [...sourceArr].sort(() => Math.random() - 0.5);
-            return bags[bagName].pop();
+            const usedSet = bagName === 'vocab' ? usedVocabSet : usedSentsSet;
+            if(bags[bagName].length === 0) {
+                // 从所有活跃单元中交替抽取，确保覆盖
+                let available = sourceArr.filter(item => !usedSet.has(item));
+                if(available.length === 0) {
+                    // 全部用完，重置
+                    usedSet.clear();
+                    available = [...sourceArr];
+                }
+                // 每个单元内部先随机打乱，再交替排列确保覆盖
+                const semesters = getActiveSemesters();
+                const sourceByUnit = bagName === 'vocab' ? vocabBySemester : sentsBySemester;
+                let unitPools = semesters.map(s =>
+                    (sourceByUnit[s] || []).filter(item => available.includes(item)).sort(() => Math.random() - 0.5)
+                );
+                let interleaved = [];
+                let maxLen = Math.max(1, ...unitPools.map(a => a.length));
+                for(let i = 0; i < maxLen; i++) {
+                    unitPools.forEach(pool => {
+                        if(i < pool.length) interleaved.push(pool[i]);
+                    });
+                }
+                bags[bagName] = interleaved;
+            }
+            const item = bags[bagName].pop();
+            if(item) usedSet.add(item);
+            return item;
         }
 
         function getChallengeTypePool() {
@@ -1652,13 +1506,13 @@
         }
 
         const levelsInfo = [
-            { id: 1, duration: 60,  questions: 3,  threshold: 35, speed: 1.7, beastEmoji: "beast-fox", beastName: "灵狐", themeName: "梦境森林", heroSkill: "木杖敲击", beastSkill: "灵光突袭", heroProjectile: "proj-light", beastProjectile: "effect-spark", skillText: "灵狐：灵光突袭　｜　守护者：木杖敲击", monsters: ["mob-noise","mob-shadow","mob-bug","mob-bug"], comboSkill: ["proj-light","effect-burst"], answerSkillCount: 2, enemyCap: 8, spawnInterval: 2100, attackInterval: 1250, bossRushSpawnInterval: 1050, ultimateEffect: ["hero-guardian","+","beast-fox","effect-answer","effect-burst"], answerSkillBurstCount: 5 },
-            { id: 2, duration: 90,  questions: 5,  threshold: 24, speed: 2.8, beastEmoji: "beast-tiger", beastName: "雷纹虎", themeName: "雷鸣山谷", heroSkill: "星光散射", beastSkill: "雷爪冲击", heroProjectile: "effect-spark", beastProjectile: "proj-lightning", skillText: "雷纹虎：雷爪冲击　｜　守护者：星光散射", monsters: ["mob-noise","mob-rage","mob-shadow","mob-shadow"], comboSkill: ["effect-spark","proj-lightning","effect-burst"], answerSkillCount: 2, enemyCap: 9, spawnInterval: 1900, attackInterval: 1200, bossRushSpawnInterval: 980, ultimateEffect: ["hero-guardian","+","beast-tiger","effect-spark","proj-lightning"], answerSkillBurstCount: 6 },
-            { id: 3, duration: 120, questions: 8,  threshold: 21, speed: 3.2, beastEmoji: "beast-unicorn", beastName: "星辉独角兽", themeName: "星光草原", heroSkill: "旋风术", beastSkill: "星辉净化", heroProjectile: "proj-wind", beastProjectile: "proj-rainbow", skillText: "独角兽：星辉净化　｜　守护者：旋风术", monsters: ["mob-rage","mob-shadow","mob-bug","mob-rage"], comboSkill: ["proj-rainbow","proj-wind","effect-spark"], answerSkillCount: 3, enemyCap: 10, spawnInterval: 1650, attackInterval: 1160, bossRushSpawnInterval: 900, ultimateEffect: ["proj-rainbow","proj-wind","effect-answer"], answerSkillBurstCount: 7 },
-            { id: 4, duration: 135, questions: 10, threshold: 19, speed: 3.6, beastEmoji: "beast-drake", beastName: "云纹小龙", themeName: "云海遗迹", heroSkill: "元素连击", beastSkill: "云海冲击", heroProjectile: "proj-lightning", beastProjectile: "proj-wave", skillText: "小龙：云海冲击　｜　守护者：元素连击", monsters: ["mob-rage","mob-shadow","mob-noise","mob-bug","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-lightning","proj-wind"], answerSkillCount: 3, enemyCap: 12, spawnInterval: 1500, attackInterval: 1120, bossRushSpawnInterval: 820, ultimateEffect: ["proj-wave","proj-lightning","proj-wind"], answerSkillBurstCount: 8 },
-            { id: 5, duration: 150, questions: 12, threshold: 17, speed: 4.1, beastEmoji: "beast-lion", beastName: "金焰狮王", themeName: "烈阳神殿", heroSkill: "火焰冲击波", beastSkill: "金焰咆哮", heroProjectile: "proj-fire", beastProjectile: "proj-fire", skillText: "狮王：金焰咆哮　｜　守护者：火焰冲击波", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-rage","mob-shadow"], comboSkill: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillCount: 4, enemyCap: 13, spawnInterval: 1400, attackInterval: 1080, bossRushSpawnInterval: 760, ultimateEffect: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillBurstCount: 9 },
-            { id: 6, duration: 165, questions: 14, threshold: 15, speed: 4.6, beastEmoji: "beast-whale", beastName: "星海巨鲸", themeName: "梦海深渊", heroSkill: "星海法阵", beastSkill: "鲸歌安眠", heroProjectile: "proj-cosmos", beastProjectile: "proj-note", skillText: "巨鲸：鲸歌安眠　｜　守护者：星海法阵", monsters: ["mob-noise","mob-shadow","mob-rage","mob-bug","mob-noise","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-cosmos","proj-note","effect-spark"], answerSkillCount: 4, enemyCap: 14, spawnInterval: 1320, attackInterval: 1040, bossRushSpawnInterval: 700, ultimateEffect: ["proj-wave","proj-cosmos","proj-note","effect-answer"], answerSkillBurstCount: 10 },
-            { id: 7, duration: 180, questions: 16, threshold: 13, speed: 5.2, beastEmoji: "beast-dragon", beastName: "东方神龙", themeName: "最终梦境结界", heroSkill: "星陨法阵", beastSkill: "神龙吐息", heroProjectile: "proj-comet", beastProjectile: "proj-fire", skillText: "神龙：神龙吐息　｜　守护者：星陨法阵", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-shadow","mob-rage","mob-noise","mob-bug"], comboSkill: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-spark"], answerSkillCount: 5, enemyCap: 16, spawnInterval: 1220, attackInterval: 980, bossRushSpawnInterval: 620, ultimateEffect: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-burst"], answerSkillBurstCount: 12 }
+            { id: 1, duration: 60,  questions: 5,  threshold: 35, speed: 1.7, beastEmoji: "beast-fox", beastName: "灵狐", themeName: "梦境森林", heroSkill: "木杖敲击", beastSkill: "灵光突袭", heroProjectile: "proj-light", beastProjectile: "effect-spark", skillText: "灵狐：灵光突袭　｜　守护者：木杖敲击", monsters: ["mob-noise","mob-shadow","mob-bug","mob-bug"], comboSkill: ["proj-light","effect-burst"], answerSkillCount: 2, enemyCap: 8, spawnInterval: 2100, attackInterval: 1250, bossRushSpawnInterval: 1050, ultimateEffect: ["hero-guardian","+","beast-fox","effect-answer","effect-burst"], answerSkillBurstCount: 5 },
+            { id: 2, duration: 90,  questions: 9,  threshold: 24, speed: 2.8, beastEmoji: "beast-tiger", beastName: "雷纹虎", themeName: "雷鸣山谷", heroSkill: "星光散射", beastSkill: "雷爪冲击", heroProjectile: "effect-spark", beastProjectile: "proj-lightning", skillText: "雷纹虎：雷爪冲击　｜　守护者：星光散射", monsters: ["mob-noise","mob-rage","mob-shadow","mob-shadow"], comboSkill: ["effect-spark","proj-lightning","effect-burst"], answerSkillCount: 2, enemyCap: 9, spawnInterval: 1900, attackInterval: 1200, bossRushSpawnInterval: 980, ultimateEffect: ["hero-guardian","+","beast-tiger","effect-spark","proj-lightning"], answerSkillBurstCount: 6 },
+            { id: 3, duration: 120, questions: 14, threshold: 21, speed: 3.2, beastEmoji: "beast-unicorn", beastName: "星辉独角兽", themeName: "星光草原", heroSkill: "旋风术", beastSkill: "星辉净化", heroProjectile: "proj-wind", beastProjectile: "proj-rainbow", skillText: "独角兽：星辉净化　｜　守护者：旋风术", monsters: ["mob-rage","mob-shadow","mob-bug","mob-rage"], comboSkill: ["proj-rainbow","proj-wind","effect-spark"], answerSkillCount: 3, enemyCap: 10, spawnInterval: 1650, attackInterval: 1160, bossRushSpawnInterval: 900, ultimateEffect: ["proj-rainbow","proj-wind","effect-answer"], answerSkillBurstCount: 7 },
+            { id: 4, duration: 135, questions: 18, threshold: 19, speed: 3.6, beastEmoji: "beast-drake", beastName: "云纹小龙", themeName: "云海遗迹", heroSkill: "元素连击", beastSkill: "云海冲击", heroProjectile: "proj-lightning", beastProjectile: "proj-wave", skillText: "小龙：云海冲击　｜　守护者：元素连击", monsters: ["mob-rage","mob-shadow","mob-noise","mob-bug","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-lightning","proj-wind"], answerSkillCount: 3, enemyCap: 12, spawnInterval: 1500, attackInterval: 1120, bossRushSpawnInterval: 820, ultimateEffect: ["proj-wave","proj-lightning","proj-wind"], answerSkillBurstCount: 8 },
+            { id: 5, duration: 150, questions: 22, threshold: 17, speed: 4.1, beastEmoji: "beast-lion", beastName: "金焰狮王", themeName: "烈阳神殿", heroSkill: "火焰冲击波", beastSkill: "金焰咆哮", heroProjectile: "proj-fire", beastProjectile: "proj-fire", skillText: "狮王：金焰咆哮　｜　守护者：火焰冲击波", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-rage","mob-shadow"], comboSkill: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillCount: 4, enemyCap: 13, spawnInterval: 1400, attackInterval: 1080, bossRushSpawnInterval: 760, ultimateEffect: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillBurstCount: 9 },
+            { id: 6, duration: 165, questions: 26, threshold: 15, speed: 4.6, beastEmoji: "beast-whale", beastName: "星海巨鲸", themeName: "梦海深渊", heroSkill: "星海法阵", beastSkill: "鲸歌安眠", heroProjectile: "proj-cosmos", beastProjectile: "proj-note", skillText: "巨鲸：鲸歌安眠　｜　守护者：星海法阵", monsters: ["mob-noise","mob-shadow","mob-rage","mob-bug","mob-noise","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-cosmos","proj-note","effect-spark"], answerSkillCount: 4, enemyCap: 14, spawnInterval: 1320, attackInterval: 1040, bossRushSpawnInterval: 700, ultimateEffect: ["proj-wave","proj-cosmos","proj-note","effect-answer"], answerSkillBurstCount: 10 },
+            { id: 7, duration: 180, questions: 30, threshold: 13, speed: 5.2, beastEmoji: "beast-dragon", beastName: "东方神龙", themeName: "最终梦境结界", heroSkill: "星陨法阵", beastSkill: "神龙吐息", heroProjectile: "proj-comet", beastProjectile: "proj-fire", skillText: "神龙：神龙吐息　｜　守护者：星陨法阵", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-shadow","mob-rage","mob-noise","mob-bug"], comboSkill: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-spark"], answerSkillCount: 5, enemyCap: 16, spawnInterval: 1220, attackInterval: 980, bossRushSpawnInterval: 620, ultimateEffect: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-burst"], answerSkillBurstCount: 12 }
         ];
 
         let currentLevelIndex = 0;
@@ -2331,10 +2185,19 @@
             const levelData = getCurrentBattleLevelData();
             // 配置了 answerSkillBurstCount 的关卡：技能图标放大为范围攻击
             if(levelData.answerSkillBurstCount) {
-                triggerAnswerSkillBurst(levelData);
+                // 用 rAF 确保答题框关闭后布局稳定
+                requestAnimationFrame(() => {
+                    const ok = triggerAnswerSkillBurst(levelData);
+                    if(!ok) fallbackAnswerSkill(levelData);
+                });
                 return;
             }
             // 默认：多重弹幕清怪
+            fallbackAnswerSkill(levelData);
+        }
+
+        // 兜底清怪：多重弹幕
+        function fallbackAnswerSkill(levelData) {
             animateRole('hero', 'bursting', 920);
             animateRole('beast', 'bursting', 920);
             showBattleEffect([heroInfo.emoji, '+', levelData.beastEmoji], 950);
@@ -2352,90 +2215,88 @@
         }
 
         // 答对题目 → 技能图标从角色位置发射，边飞边放大，清除沿途怪物
+        // 返回 true 表示成功，false 表示失败需回退
         function triggerAnswerSkillBurst(levelData, overrideCount = 0) {
-            const burstTotal = overrideCount || levelData.answerSkillBurstCount || 5;
-            const leftClear = Math.ceil(burstTotal / 2);   // 左路清除数
-            const rightClear = Math.floor(burstTotal / 2); // 右路清除数
+            try {
+                const burstTotal = overrideCount || levelData.answerSkillBurstCount || 5;
+                const leftClear = Math.ceil(burstTotal / 2);
+                const rightClear = Math.floor(burstTotal / 2);
 
-            // 角色施法动画
-            animateRole('hero', 'casting', 850);
-            animateRole('beast', 'casting', 850);
-            setBattleBanner(`答题成功！${levelData.heroSkill} + ${levelData.beastSkill} 范围释放！`, '');
+                const battleStage = document.getElementById('battle-stage');
+                if(!battleStage) return false;
+                const leftMetrics = getLaneMetrics('left');
+                const rightMetrics = getLaneMetrics('right');
+                // 校验路线有效
+                if(leftMetrics.width <= 0 || rightMetrics.width <= 0) return false;
 
-            const battleStage = document.getElementById('battle-stage');
-            const battleRect = battleStage.getBoundingClientRect();
-            const leftMetrics = getLaneMetrics('left');
-            const rightMetrics = getLaneMetrics('right');
+                // 角色施法动画
+                animateRole('hero', 'casting', 850);
+                animateRole('beast', 'casting', 850);
+                setBattleBanner(`答题成功！${levelData.heroSkill} + ${levelData.beastSkill} 范围释放！`, '');
 
-            // 获取角色在 battle-stage 中的坐标
-            const beastEl = document.getElementById('monster-emoji');
-            const heroEl = document.getElementById('hero-emoji');
-            const beastRect = beastEl.getBoundingClientRect();
-            const heroRect = heroEl.getBoundingClientRect();
-            const beastCX = beastRect.left - battleRect.left + beastRect.width / 2;
-            const beastCY = beastRect.top - battleRect.top + beastRect.height / 2;
-            const heroCX = heroRect.left - battleRect.left + heroRect.width / 2;
-            const heroCY = heroRect.top - battleRect.top + heroRect.height / 2;
+                // 从路线坐标推算角色位置
+                const beastCX = leftMetrics.x + leftMetrics.width - 25;
+                const beastCY = leftMetrics.y + leftMetrics.height * 0.58;
+                const heroCX = rightMetrics.x + 25;
+                const heroCY = rightMetrics.y + rightMetrics.height * 0.58;
 
-            // 左路：从神兽位置发射，飞向左外侧（朝怪物来源方向），边飞边放大
-            const leftStartX = beastCX;
-            const leftStartY = beastCY;
-            const leftEndX = leftMetrics.x - 40; // 飞出左边界（外侧）
+            // 左路终点：飞出左边界外侧更远
+            const leftEndX = leftMetrics.x - 80;
             const leftEndY = leftMetrics.y + leftMetrics.height / 2;
 
+            // 右路终点：飞出右边界外侧更远
+            const rightEndX = rightMetrics.x + rightMetrics.width + 80;
+            const rightEndY = rightMetrics.y + rightMetrics.height / 2;
+
+            // 创建左路技能球（神兽）
             const leftBall = document.createElement('div');
             leftBall.className = 'lane-burst-ball';
-            leftBall.style.left = leftStartX + 'px';
-            leftBall.style.top = leftStartY + 'px';
-            leftBall.style.transform = 'translate(-50%, -50%) scale(0.25)';
-            leftBall.style.opacity = '0.95';
-            leftBall.style.transition = 'left 0.72s cubic-bezier(0.22, 1, 0.36, 1), top 0.72s cubic-bezier(0.22, 1, 0.36, 1), transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease-out 0.4s';
             leftBall.innerHTML = renderVisualValue(levelData.beastProjectile);
             battleStage.appendChild(leftBall);
 
-            // 右路：从守护者位置发射，飞向右外侧（朝怪物来源方向），边飞边放大
-            const rightStartX = heroCX;
-            const rightStartY = heroCY;
-            const rightEndX = rightMetrics.x + rightMetrics.width + 40; // 飞出右边界（外侧）
-            const rightEndY = rightMetrics.y + rightMetrics.height / 2;
-
+            // 创建右路技能球（守护者）
             const rightBall = document.createElement('div');
             rightBall.className = 'lane-burst-ball';
-            rightBall.style.left = rightStartX + 'px';
-            rightBall.style.top = rightStartY + 'px';
-            rightBall.style.transform = 'translate(-50%, -50%) scale(0.25)';
-            rightBall.style.opacity = '0.95';
-            rightBall.style.transition = 'left 0.72s cubic-bezier(0.22, 1, 0.36, 1), top 0.72s cubic-bezier(0.22, 1, 0.36, 1), transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease-out 0.4s';
             rightBall.innerHTML = renderVisualValue(levelData.heroProjectile);
             battleStage.appendChild(rightBall);
 
-            // 触发飞行+放大动画
-            requestAnimationFrame(() => {
-                leftBall.style.left = leftEndX + 'px';
-                leftBall.style.top = leftEndY + 'px';
-                leftBall.style.transform = 'translate(-50%, -50%) scale(5)';
-                leftBall.style.opacity = '0';
-                rightBall.style.left = rightEndX + 'px';
-                rightBall.style.top = rightEndY + 'px';
-                rightBall.style.transform = 'translate(-50%, -50%) scale(5)';
-                rightBall.style.opacity = '0';
-            });
+            // 使用 Web Animations API：直线飞出 + 逐渐放大，前段清晰，后段渐隐
+            const lerp = (a, b, t) => a + (b - a) * t;
+            const easing = 'cubic-bezier(0.22, 1, 0.36, 1)';
+            const burstKeyframes = (startX, startY, endX, endY) => [
+                { left: startX + 'px', top: startY + 'px', transform: 'translate(-50%, -50%) scale(0.2)', opacity: 0.95, offset: 0 },
+                { left: lerp(startX, endX, 0.35) + 'px', top: lerp(startY, endY, 0.35) + 'px', transform: 'translate(-50%, -50%) scale(4)', opacity: 0.9, offset: 0.35 },
+                { left: lerp(startX, endX, 0.7) + 'px', top: lerp(startY, endY, 0.7) + 'px', transform: 'translate(-50%, -50%) scale(7)', opacity: 0.5, offset: 0.7 },
+                { left: endX + 'px', top: endY + 'px', transform: 'translate(-50%, -50%) scale(8)', opacity: 0, offset: 1 }
+            ];
 
-            // 动画中段（约350ms）清除怪物（此时球已放大到中等尺寸，覆盖大片区域）
+            leftBall.animate(burstKeyframes(beastCX, beastCY, leftEndX, leftEndY),
+                { duration: 1100, easing, fill: 'forwards' });
+
+            rightBall.animate(burstKeyframes(heroCX, heroCY, rightEndX, rightEndY),
+                { duration: 1100, easing, fill: 'forwards' });
+
+            // 音效立即跟上动画（80ms），清怪在视觉峰值（400ms）
+            setTimeout(() => { SFX.burstImpact(); }, 80);
             setTimeout(() => {
-                SFX.playChord([261.63, 329.63, 392.00], 0.055, 0.4);
                 directClearEnemies('left', leftClear);
                 directClearEnemies('right', rightClear);
-            }, 350);
+            }, 400);
 
             // 清理元素
             setTimeout(() => {
                 if(leftBall.parentNode) leftBall.remove();
                 if(rightBall.parentNode) rightBall.remove();
-            }, 800);
-        }
+            }, 1200);
 
-        // 直接清除怪物（不发射弹幕），用于范围攻击
+            return true;
+        } catch(e) {
+            console.warn('burst skill failed, fallback:', e);
+            return false;
+        }
+    }
+
+    // 直接清除怪物（不发射弹幕），用于范围攻击
         function directClearEnemies(side, count) {
             if(!battleState) return 0;
             const list = side === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
@@ -2465,13 +2326,18 @@
         function triggerComboUltimate() {
             if(!battleState) return;
             const levelData = getCurrentBattleLevelData();
-            // 配置了 answerSkillBurstCount 的关卡：Boss阶段也用技能飞出的范围攻击，清除更多
             if(levelData.answerSkillBurstCount) {
                 const boostedCount = levelData.answerSkillBurstCount + 3;
-                triggerAnswerSkillBurst(levelData, boostedCount);
+                requestAnimationFrame(() => {
+                    const ok = triggerAnswerSkillBurst(levelData, boostedCount);
+                    if(!ok) fallbackUltimate(levelData);
+                });
                 return;
             }
-            // 默认：多重弹幕清怪
+            fallbackUltimate(levelData);
+        }
+
+        function fallbackUltimate(levelData) {
             animateRole('hero', 'bursting', 1050);
             animateRole('beast', 'bursting', 1050);
             showBattleEffect(levelData.ultimateEffect, 1200);
@@ -2604,7 +2470,7 @@
             config.testMode = document.getElementById('input-test-mode').checked;
             document.getElementById('red-line').style.left = config.threshold + '%';
             document.getElementById('settings-modal').style.display = 'none';
-            state.isPaused = false; setRoleResting(false); if(state.isPlaying) SynthBGM.start(); 
+            state.isPaused = false; setRoleResting(false); if(state.isPlaying && isBgmEnabled) SynthBGM.start();
         }
 
         function skipLevelTest() { closeSettings(); endGame(true); }
@@ -2612,7 +2478,7 @@
             state.isPaused = !state.isPaused;
             document.getElementById('pause-btn').innerText = state.isPaused ? "继续" : "暂停";
             setRoleResting(state.isPaused);
-            state.isPaused ? SynthBGM.stop() : SynthBGM.start();
+            if (state.isPaused) SynthBGM.stop(); else if (isBgmEnabled) SynthBGM.start();
         }
         function restartLevel() {
             clearInterval(timerLoop);
@@ -2666,9 +2532,10 @@
             config.dangerSpeed = levelData.speed;
             config.readSpeed = 8;
 
-            state.challengeTimes = []; 
+            state.challengeTimes = [];
             bags = { 'vocab':[], 'sents':[], 'typeBag':[] };
-            groupBag = [];
+            usedVocabSet.clear();
+            usedSentsSet.clear();
             groupBag = [];
             lastTypePoolKey = '';
 
@@ -2722,7 +2589,7 @@
                 
                 showScreen('game-screen');
                 requestAnimationFrame(positionFighterZones);
-                SynthBGM.start(); 
+                if (isBgmEnabled) SynthBGM.start();
                 startBattleLoop();
                 gameLoop();
             } catch (e) { 
