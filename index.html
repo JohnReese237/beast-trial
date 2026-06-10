@@ -203,6 +203,8 @@
         .projectile.beast { color: #80deea; }
         .battle-effect-item { position: absolute; transform: translate(-50%, -50%); font-size: clamp(1.2rem, 3vw, 2rem); font-weight: bold; color: white; text-shadow: 0 0 10px rgba(255,255,255,0.75); z-index: 4; animation: floatFade 0.34s ease-out forwards; display: inline-flex; align-items: center; gap: 6px; }
         @keyframes floatFade { 0% { opacity: 0; transform: translate(-50%, -40%) scale(0.8); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -95%) scale(1.12); } }
+        /* 答题技能范围攻击：技能图标边飞边放大 */
+        .lane-burst-ball { position: absolute; z-index: 22; pointer-events: none; font-size: 64px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 28px rgba(255,215,0,0.85)); will-change: left, transform, opacity; }
         .battle-banner { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); min-width: 220px; max-width: calc(100% - 20px); padding: 8px 16px; border-radius: 999px; background: rgba(8, 12, 33, 0.7); border: 1px solid rgba(255,255,255,0.22); color: white; font-weight: bold; text-align: center; text-shadow: 0 1px 3px #000; z-index: 6; backdrop-filter: blur(4px); }
         .battle-banner.warning { background: rgba(122, 24, 24, 0.78); border-color: rgba(255, 112, 112, 0.4); }
         .battle-banner.seal { background: rgba(36, 73, 120, 0.76); border-color: rgba(125, 211, 252, 0.5); }
@@ -471,7 +473,7 @@
                         <div id="boss-relay-progress" style="font-size:1.5rem; color:#f1c40f; font-weight:bold;">觉醒能量：0 / 8</div>
                         <div id="boss-timer" class="boss-timer-text">剩余：10s</div>
                         <div id="boss-relay-group" style="font-size:1.5rem;">请第 1 组准备作答</div>
-                        <div id="boss-relay-kind" style="font-size:1.2rem; margin-top:8px;">英语朗读</div>
+                        <div id="boss-relay-kind" style="font-size:1.2rem; margin-top:8px;">准备迎接挑战</div>
                         <div id="boss-t1-word">WORD</div>
                         <div id="boss-reading-wrap" class="reading-bar-wrap" style="display:block;">
                             <span class="reading-label" style="color:#fff; text-shadow: 1px 1px 2px #000;">声量蓄力中...</span>
@@ -1567,7 +1569,7 @@
         }
 
         function getBossRelayTypePool() {
-            return ['read', 'en-task'];
+            return ['en-task', 'en-judge'];
         }
 
         function getBossTitle() {
@@ -1583,7 +1585,7 @@
             const groupText = `第 ${step + 1} 组`;
             if(!task) return `请${groupText}准备作答`;
             if(task.mode === 'task') return `请${groupText}进行选择题作答`;
-            if(task.mode === 'read') return `请${groupText}进行朗读挑战`;
+            if(task.mode === 'judge') return `请${groupText}进行判断作答`;
             return `请${groupText}进行挑战`;
         }
 
@@ -1650,13 +1652,13 @@
         }
 
         const levelsInfo = [
-            { id: 1, duration: 60,  questions: 3,  threshold: 35, speed: 1.7, beastEmoji: "beast-fox", beastName: "灵狐", themeName: "梦境森林", heroSkill: "木杖敲击", beastSkill: "灵光突袭", heroProjectile: "proj-light", beastProjectile: "effect-spark", skillText: "灵狐：灵光突袭　｜　守护者：木杖敲击", monsters: ["mob-noise","mob-shadow","mob-bug","mob-bug"], comboSkill: ["proj-light","effect-burst"], answerSkillCount: 2, enemyCap: 8, spawnInterval: 2100, attackInterval: 1250, bossRushSpawnInterval: 1050, ultimateEffect: ["hero-guardian","+","beast-fox","effect-answer","effect-burst"] },
-            { id: 2, duration: 90,  questions: 5,  threshold: 24, speed: 2.8, beastEmoji: "beast-tiger", beastName: "雷纹虎", themeName: "雷鸣山谷", heroSkill: "星光散射", beastSkill: "雷爪冲击", heroProjectile: "effect-spark", beastProjectile: "proj-lightning", skillText: "雷纹虎：雷爪冲击　｜　守护者：星光散射", monsters: ["mob-noise","mob-rage","mob-shadow","mob-shadow"], comboSkill: ["effect-spark","proj-lightning","effect-burst"], answerSkillCount: 2, enemyCap: 9, spawnInterval: 1900, attackInterval: 1200, bossRushSpawnInterval: 980, ultimateEffect: ["hero-guardian","+","beast-tiger","effect-spark","proj-lightning"] },
-            { id: 3, duration: 120, questions: 8,  threshold: 21, speed: 3.2, beastEmoji: "beast-unicorn", beastName: "星辉独角兽", themeName: "星光草原", heroSkill: "旋风术", beastSkill: "星辉净化", heroProjectile: "proj-wind", beastProjectile: "proj-rainbow", skillText: "独角兽：星辉净化　｜　守护者：旋风术", monsters: ["mob-rage","mob-shadow","mob-bug","mob-rage"], comboSkill: ["proj-rainbow","proj-wind","effect-spark"], answerSkillCount: 3, enemyCap: 10, spawnInterval: 1650, attackInterval: 1160, bossRushSpawnInterval: 900, ultimateEffect: ["proj-rainbow","proj-wind","effect-answer"] },
-            { id: 4, duration: 135, questions: 10, threshold: 19, speed: 3.6, beastEmoji: "beast-drake", beastName: "云纹小龙", themeName: "云海遗迹", heroSkill: "元素连击", beastSkill: "云海冲击", heroProjectile: "proj-lightning", beastProjectile: "proj-wave", skillText: "小龙：云海冲击　｜　守护者：元素连击", monsters: ["mob-rage","mob-shadow","mob-noise","mob-bug","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-lightning","proj-wind"], answerSkillCount: 3, enemyCap: 12, spawnInterval: 1500, attackInterval: 1120, bossRushSpawnInterval: 820, ultimateEffect: ["proj-wave","proj-lightning","proj-wind"] },
-            { id: 5, duration: 150, questions: 12, threshold: 17, speed: 4.1, beastEmoji: "beast-lion", beastName: "金焰狮王", themeName: "烈阳神殿", heroSkill: "火焰冲击波", beastSkill: "金焰咆哮", heroProjectile: "proj-fire", beastProjectile: "proj-fire", skillText: "狮王：金焰咆哮　｜　守护者：火焰冲击波", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-rage","mob-shadow"], comboSkill: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillCount: 4, enemyCap: 13, spawnInterval: 1400, attackInterval: 1080, bossRushSpawnInterval: 760, ultimateEffect: ["proj-fire","effect-answer","effect-burst","proj-fire"] },
-            { id: 6, duration: 165, questions: 14, threshold: 15, speed: 4.6, beastEmoji: "beast-whale", beastName: "星海巨鲸", themeName: "梦海深渊", heroSkill: "星海法阵", beastSkill: "鲸歌安眠", heroProjectile: "proj-cosmos", beastProjectile: "proj-note", skillText: "巨鲸：鲸歌安眠　｜　守护者：星海法阵", monsters: ["mob-noise","mob-shadow","mob-rage","mob-bug","mob-noise","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-cosmos","proj-note","effect-spark"], answerSkillCount: 4, enemyCap: 14, spawnInterval: 1320, attackInterval: 1040, bossRushSpawnInterval: 700, ultimateEffect: ["proj-wave","proj-cosmos","proj-note","effect-answer"] },
-            { id: 7, duration: 180, questions: 16, threshold: 13, speed: 5.2, beastEmoji: "beast-dragon", beastName: "东方神龙", themeName: "最终梦境结界", heroSkill: "星陨法阵", beastSkill: "神龙吐息", heroProjectile: "proj-comet", beastProjectile: "proj-fire", skillText: "神龙：神龙吐息　｜　守护者：星陨法阵", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-shadow","mob-rage","mob-noise","mob-bug"], comboSkill: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-spark"], answerSkillCount: 5, enemyCap: 16, spawnInterval: 1220, attackInterval: 980, bossRushSpawnInterval: 620, ultimateEffect: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-burst"] }
+            { id: 1, duration: 60,  questions: 3,  threshold: 35, speed: 1.7, beastEmoji: "beast-fox", beastName: "灵狐", themeName: "梦境森林", heroSkill: "木杖敲击", beastSkill: "灵光突袭", heroProjectile: "proj-light", beastProjectile: "effect-spark", skillText: "灵狐：灵光突袭　｜　守护者：木杖敲击", monsters: ["mob-noise","mob-shadow","mob-bug","mob-bug"], comboSkill: ["proj-light","effect-burst"], answerSkillCount: 2, enemyCap: 8, spawnInterval: 2100, attackInterval: 1250, bossRushSpawnInterval: 1050, ultimateEffect: ["hero-guardian","+","beast-fox","effect-answer","effect-burst"], answerSkillBurstCount: 5 },
+            { id: 2, duration: 90,  questions: 5,  threshold: 24, speed: 2.8, beastEmoji: "beast-tiger", beastName: "雷纹虎", themeName: "雷鸣山谷", heroSkill: "星光散射", beastSkill: "雷爪冲击", heroProjectile: "effect-spark", beastProjectile: "proj-lightning", skillText: "雷纹虎：雷爪冲击　｜　守护者：星光散射", monsters: ["mob-noise","mob-rage","mob-shadow","mob-shadow"], comboSkill: ["effect-spark","proj-lightning","effect-burst"], answerSkillCount: 2, enemyCap: 9, spawnInterval: 1900, attackInterval: 1200, bossRushSpawnInterval: 980, ultimateEffect: ["hero-guardian","+","beast-tiger","effect-spark","proj-lightning"], answerSkillBurstCount: 6 },
+            { id: 3, duration: 120, questions: 8,  threshold: 21, speed: 3.2, beastEmoji: "beast-unicorn", beastName: "星辉独角兽", themeName: "星光草原", heroSkill: "旋风术", beastSkill: "星辉净化", heroProjectile: "proj-wind", beastProjectile: "proj-rainbow", skillText: "独角兽：星辉净化　｜　守护者：旋风术", monsters: ["mob-rage","mob-shadow","mob-bug","mob-rage"], comboSkill: ["proj-rainbow","proj-wind","effect-spark"], answerSkillCount: 3, enemyCap: 10, spawnInterval: 1650, attackInterval: 1160, bossRushSpawnInterval: 900, ultimateEffect: ["proj-rainbow","proj-wind","effect-answer"], answerSkillBurstCount: 7 },
+            { id: 4, duration: 135, questions: 10, threshold: 19, speed: 3.6, beastEmoji: "beast-drake", beastName: "云纹小龙", themeName: "云海遗迹", heroSkill: "元素连击", beastSkill: "云海冲击", heroProjectile: "proj-lightning", beastProjectile: "proj-wave", skillText: "小龙：云海冲击　｜　守护者：元素连击", monsters: ["mob-rage","mob-shadow","mob-noise","mob-bug","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-lightning","proj-wind"], answerSkillCount: 3, enemyCap: 12, spawnInterval: 1500, attackInterval: 1120, bossRushSpawnInterval: 820, ultimateEffect: ["proj-wave","proj-lightning","proj-wind"], answerSkillBurstCount: 8 },
+            { id: 5, duration: 150, questions: 12, threshold: 17, speed: 4.1, beastEmoji: "beast-lion", beastName: "金焰狮王", themeName: "烈阳神殿", heroSkill: "火焰冲击波", beastSkill: "金焰咆哮", heroProjectile: "proj-fire", beastProjectile: "proj-fire", skillText: "狮王：金焰咆哮　｜　守护者：火焰冲击波", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-rage","mob-shadow"], comboSkill: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillCount: 4, enemyCap: 13, spawnInterval: 1400, attackInterval: 1080, bossRushSpawnInterval: 760, ultimateEffect: ["proj-fire","effect-answer","effect-burst","proj-fire"], answerSkillBurstCount: 9 },
+            { id: 6, duration: 165, questions: 14, threshold: 15, speed: 4.6, beastEmoji: "beast-whale", beastName: "星海巨鲸", themeName: "梦海深渊", heroSkill: "星海法阵", beastSkill: "鲸歌安眠", heroProjectile: "proj-cosmos", beastProjectile: "proj-note", skillText: "巨鲸：鲸歌安眠　｜　守护者：星海法阵", monsters: ["mob-noise","mob-shadow","mob-rage","mob-bug","mob-noise","mob-shadow","mob-rage"], comboSkill: ["proj-wave","proj-cosmos","proj-note","effect-spark"], answerSkillCount: 4, enemyCap: 14, spawnInterval: 1320, attackInterval: 1040, bossRushSpawnInterval: 700, ultimateEffect: ["proj-wave","proj-cosmos","proj-note","effect-answer"], answerSkillBurstCount: 10 },
+            { id: 7, duration: 180, questions: 16, threshold: 13, speed: 5.2, beastEmoji: "beast-dragon", beastName: "东方神龙", themeName: "最终梦境结界", heroSkill: "星陨法阵", beastSkill: "神龙吐息", heroProjectile: "proj-comet", beastProjectile: "proj-fire", skillText: "神龙：神龙吐息　｜　守护者：星陨法阵", monsters: ["mob-rage","mob-noise","mob-shadow","mob-bug","mob-shadow","mob-rage","mob-noise","mob-bug"], comboSkill: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-spark"], answerSkillCount: 5, enemyCap: 16, spawnInterval: 1220, attackInterval: 980, bossRushSpawnInterval: 620, ultimateEffect: ["effect-spark","beast-dragon","proj-fire","proj-lightning","proj-wind","effect-answer","effect-burst"], answerSkillBurstCount: 12 }
         ];
 
         let currentLevelIndex = 0;
@@ -2327,6 +2329,12 @@
         function triggerAnswerSkill() {
             if(!battleState) return;
             const levelData = getCurrentBattleLevelData();
+            // 配置了 answerSkillBurstCount 的关卡：技能图标放大为范围攻击
+            if(levelData.answerSkillBurstCount) {
+                triggerAnswerSkillBurst(levelData);
+                return;
+            }
+            // 默认：多重弹幕清怪
             animateRole('hero', 'bursting', 920);
             animateRole('beast', 'bursting', 920);
             showBattleEffect([heroInfo.emoji, '+', levelData.beastEmoji], 950);
@@ -2343,9 +2351,127 @@
             clearEnemiesBatch('right', battleState.rightEnemies.length, 'answer');
         }
 
+        // 答对题目 → 技能图标从角色位置发射，边飞边放大，清除沿途怪物
+        function triggerAnswerSkillBurst(levelData, overrideCount = 0) {
+            const burstTotal = overrideCount || levelData.answerSkillBurstCount || 5;
+            const leftClear = Math.ceil(burstTotal / 2);   // 左路清除数
+            const rightClear = Math.floor(burstTotal / 2); // 右路清除数
+
+            // 角色施法动画
+            animateRole('hero', 'casting', 850);
+            animateRole('beast', 'casting', 850);
+            setBattleBanner(`答题成功！${levelData.heroSkill} + ${levelData.beastSkill} 范围释放！`, '');
+
+            const battleStage = document.getElementById('battle-stage');
+            const battleRect = battleStage.getBoundingClientRect();
+            const leftMetrics = getLaneMetrics('left');
+            const rightMetrics = getLaneMetrics('right');
+
+            // 获取角色在 battle-stage 中的坐标
+            const beastEl = document.getElementById('monster-emoji');
+            const heroEl = document.getElementById('hero-emoji');
+            const beastRect = beastEl.getBoundingClientRect();
+            const heroRect = heroEl.getBoundingClientRect();
+            const beastCX = beastRect.left - battleRect.left + beastRect.width / 2;
+            const beastCY = beastRect.top - battleRect.top + beastRect.height / 2;
+            const heroCX = heroRect.left - battleRect.left + heroRect.width / 2;
+            const heroCY = heroRect.top - battleRect.top + heroRect.height / 2;
+
+            // 左路：从神兽位置发射，飞向左外侧（朝怪物来源方向），边飞边放大
+            const leftStartX = beastCX;
+            const leftStartY = beastCY;
+            const leftEndX = leftMetrics.x - 40; // 飞出左边界（外侧）
+            const leftEndY = leftMetrics.y + leftMetrics.height / 2;
+
+            const leftBall = document.createElement('div');
+            leftBall.className = 'lane-burst-ball';
+            leftBall.style.left = leftStartX + 'px';
+            leftBall.style.top = leftStartY + 'px';
+            leftBall.style.transform = 'translate(-50%, -50%) scale(0.25)';
+            leftBall.style.opacity = '0.95';
+            leftBall.style.transition = 'left 0.72s cubic-bezier(0.22, 1, 0.36, 1), top 0.72s cubic-bezier(0.22, 1, 0.36, 1), transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease-out 0.4s';
+            leftBall.innerHTML = renderVisualValue(levelData.beastProjectile);
+            battleStage.appendChild(leftBall);
+
+            // 右路：从守护者位置发射，飞向右外侧（朝怪物来源方向），边飞边放大
+            const rightStartX = heroCX;
+            const rightStartY = heroCY;
+            const rightEndX = rightMetrics.x + rightMetrics.width + 40; // 飞出右边界（外侧）
+            const rightEndY = rightMetrics.y + rightMetrics.height / 2;
+
+            const rightBall = document.createElement('div');
+            rightBall.className = 'lane-burst-ball';
+            rightBall.style.left = rightStartX + 'px';
+            rightBall.style.top = rightStartY + 'px';
+            rightBall.style.transform = 'translate(-50%, -50%) scale(0.25)';
+            rightBall.style.opacity = '0.95';
+            rightBall.style.transition = 'left 0.72s cubic-bezier(0.22, 1, 0.36, 1), top 0.72s cubic-bezier(0.22, 1, 0.36, 1), transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease-out 0.4s';
+            rightBall.innerHTML = renderVisualValue(levelData.heroProjectile);
+            battleStage.appendChild(rightBall);
+
+            // 触发飞行+放大动画
+            requestAnimationFrame(() => {
+                leftBall.style.left = leftEndX + 'px';
+                leftBall.style.top = leftEndY + 'px';
+                leftBall.style.transform = 'translate(-50%, -50%) scale(5)';
+                leftBall.style.opacity = '0';
+                rightBall.style.left = rightEndX + 'px';
+                rightBall.style.top = rightEndY + 'px';
+                rightBall.style.transform = 'translate(-50%, -50%) scale(5)';
+                rightBall.style.opacity = '0';
+            });
+
+            // 动画中段（约350ms）清除怪物（此时球已放大到中等尺寸，覆盖大片区域）
+            setTimeout(() => {
+                SFX.playChord([261.63, 329.63, 392.00], 0.055, 0.4);
+                directClearEnemies('left', leftClear);
+                directClearEnemies('right', rightClear);
+            }, 350);
+
+            // 清理元素
+            setTimeout(() => {
+                if(leftBall.parentNode) leftBall.remove();
+                if(rightBall.parentNode) rightBall.remove();
+            }, 800);
+        }
+
+        // 直接清除怪物（不发射弹幕），用于范围攻击
+        function directClearEnemies(side, count) {
+            if(!battleState) return 0;
+            const list = side === 'left' ? battleState.leftEnemies : battleState.rightEnemies;
+            const sorted = list
+                .filter(enemy => !enemy.dying && !enemy.removeAt && !enemy.breached)
+                .slice()
+                .sort((a, b) => side === 'left' ? b.x - a.x : a.x - b.x);
+            const targets = sorted.slice(0, count);
+            targets.forEach(enemy => {
+                enemy.dying = true;
+                enemy.state = 'dying';
+                enemy.removeAt = Date.now() + 380;
+                enemy.speed = 0;
+                const world = getLaneWorldPos(side, enemy.x, enemy.y);
+                createBattleEffect({
+                    emoji: 'effect-spark',
+                    text: '',
+                    x: world.x,
+                    y: world.y,
+                    type: 'answer',
+                    duration: 380
+                });
+            });
+            return targets.length;
+        }
+
         function triggerComboUltimate() {
             if(!battleState) return;
             const levelData = getCurrentBattleLevelData();
+            // 配置了 answerSkillBurstCount 的关卡：Boss阶段也用技能飞出的范围攻击，清除更多
+            if(levelData.answerSkillBurstCount) {
+                const boostedCount = levelData.answerSkillBurstCount + 3;
+                triggerAnswerSkillBurst(levelData, boostedCount);
+                return;
+            }
+            // 默认：多重弹幕清怪
             animateRole('hero', 'bursting', 1050);
             animateRole('beast', 'bursting', 1050);
             showBattleEffect(levelData.ultimateEffect, 1200);
@@ -2643,8 +2769,8 @@
                 ['read', 'class-read', 'bomb-defuse'].includes(state.currentChall.mode));
         }
 
-        function addDangerBlock(reason = '') {
-            state.dangerLevel += 1;
+        function addDangerBlock(reason = '', count = 1) {
+            state.dangerLevel += count;
             state.noiseAcc = 0;
             updateDangerUI();
             SFX.tick();
@@ -2774,10 +2900,28 @@
             let types = getBossRelayTypePool();
             let type = types[Math.floor(Math.random() * types.length)];
 
-            if(type === 'read') {
-                return { mode: 'read', kind: '英语朗读', text: getShuffledItem('sents', getActiveSents()), deadlineMs: 10000 };
+            // en-judge：判断题 —— 看英文选✓/✗
+            if(type === 'en-judge') {
+                let activeVocab = getActiveVocab();
+                let raw = getShuffledItem('vocab', activeVocab);
+                let parts = raw.match(/(.+)\((.+)\)/);
+                let word = parts ? parts[1].trim() : raw;
+                let correctAns = parts ? parts[2].trim() : raw;
+                // 50% 展示正确释义，50% 展示随机错误释义
+                let showCorrect = Math.random() > 0.5;
+                let displayedMeaning;
+                if(showCorrect) {
+                    displayedMeaning = correctAns;
+                } else {
+                    let wrongMeanings = activeVocab
+                        .map(item => { let m = item.match(/.+\((.+)\)/); return m ? m[1].trim() : item; })
+                        .filter(item => item !== correctAns)
+                        .sort(() => Math.random() - 0.5);
+                    displayedMeaning = wrongMeanings.length > 0 ? wrongMeanings[0] : '✗✗';
+                }
+                return { mode: 'judge', kind: '英语判断', text: word, judgeMeaning: displayedMeaning, ans: showCorrect, opts: ['✓ 正确', '✗ 错误'], deadlineMs: 15000 };
             }
-            // en-task
+            // en-task：选择题
             let activeVocab = getActiveVocab();
             let raw = getShuffledItem('vocab', activeVocab);
             let parts = raw.match(/(.+)\((.+)\)/);
@@ -2860,16 +3004,22 @@
             document.getElementById('challenge-group-callout').innerText = `接力 ${bossState.step}/8 · ${getBossGroupPrompt(bossState.step, bossState.currentTask)}`;
             document.getElementById('challenge-group-callout').style.display = 'inline-flex';
             document.getElementById('boss-relay-kind').innerText = `当前挑战：${bossState.currentTask.kind}`;
-            document.getElementById('boss-t1-word').innerText = bossState.currentTask.text;
+            // 判断题：展示英文单词 + 待判断的中文释义
+            if(bossState.currentTask.mode === 'judge') {
+                document.getElementById('boss-t1-word').innerText = `${bossState.currentTask.text} ＝ ${bossState.currentTask.judgeMeaning} ？`;
+            } else {
+                document.getElementById('boss-t1-word').innerText = bossState.currentTask.text;
+            }
             document.getElementById('boss-t1-fill').style.width = '0%';
             document.getElementById('boss-relay-feedback').innerText = '';
-            document.getElementById('boss-reading-wrap').style.display = bossState.currentTask.mode === 'read' ? 'block' : 'none';
-            document.getElementById('boss-test-pass').style.display = (config.testMode && bossState.currentTask.mode === 'read') ? 'inline-block' : 'none';
+            // Boss阶段全部为非朗读题，隐藏朗读条
+            document.getElementById('boss-reading-wrap').style.display = 'none';
+            document.getElementById('boss-test-pass').style.display = 'none';
 
             let options = document.getElementById('boss-relay-options');
             options.innerHTML = '';
-            options.style.display = bossState.currentTask.mode === 'task' ? 'flex' : 'none';
-            if(bossState.currentTask.mode === 'task') {
+            options.style.display = (bossState.currentTask.mode === 'task' || bossState.currentTask.mode === 'judge') ? 'flex' : 'none';
+            if(bossState.currentTask.mode === 'task' || bossState.currentTask.mode === 'judge') {
                 bossState.currentTask.opts.forEach(opt => {
                     let btn = document.createElement('button');
                     btn.className = 'task-btn'; btn.innerText = opt;
@@ -2883,8 +3033,20 @@
 
         function handleBossRelayClick(selected, btn) {
             lockOptionButtons('boss-relay-options');
-            if(!bossState.active || bossState.resolving || !bossState.currentTask || bossState.currentTask.mode !== 'task') return;
-            if(selected === bossState.currentTask.ans) {
+            if(!bossState.active || bossState.resolving || !bossState.currentTask) return;
+            const mode = bossState.currentTask.mode;
+            if(mode !== 'task' && mode !== 'judge') return;
+
+            let isCorrect = false;
+            if(mode === 'judge') {
+                // 判断题：ans 为 true/false，选项 '✓ 正确' 对应 true，'✗ 错误' 对应 false
+                const playerSaysCorrect = selected.includes('正确');
+                isCorrect = (playerSaysCorrect === bossState.currentTask.ans);
+            } else {
+                isCorrect = (selected === bossState.currentTask.ans);
+            }
+
+            if(isCorrect) {
                 btn.style.backgroundColor = '#2ecc71'; btn.style.color = 'white';
                 finishBossStep(true);
             } else {
@@ -2927,9 +3089,9 @@
                 SFX.fail();
                 state.consecutiveCorrect = 0;
                 updateComboUI();
-                feedback.innerText = `第 ${groupNum} 组挑战失败，守护者血量 -1！`;
+                feedback.innerText = `第 ${groupNum} 组挑战失败，守护者血量 -4！`;
                 feedback.style.color = '#ffeb3b';
-                if(addDangerBlock('boss relay failed')) return;
+                if(addDangerBlock('boss relay failed', 4)) return;
             }
 
             bossState.step++;
@@ -3000,18 +3162,11 @@
                     let timeLeft = Math.ceil((bossState.deadline - Date.now()) / 1000);
                     document.getElementById('boss-timer').innerText = `剩余：${Math.max(timeLeft, 0)}s`;
 
-                    if (bossState.currentTask && bossState.currentTask.mode === 'read') {
-                        applyReadingProgress(vol, {
-                            progressOwner: bossState,
-                            fillId: 'boss-t1-fill',
-                            successCallback: () => finishBossStep(true),
-                            failCallback: () => finishBossStep(false),
-                            timeLeft
-                        });
-                    } else if (bossState.currentTask && bossState.currentTask.mode === 'task') {
+                    // Boss阶段全部为选择题/判断题，超时视为失败
+                    if (bossState.currentTask && (bossState.currentTask.mode === 'task' || bossState.currentTask.mode === 'judge')) {
                         if (timeLeft <= 0) finishBossStep(false);
                     }
-                    return; 
+                    return;
                 }
 
                 let timeLeft = Math.ceil((state.challengeDeadline - Date.now()) / 1000);
@@ -3028,8 +3183,8 @@
                             },
                             failCallback: () => {
                                 if(cMode === 'bomb-defuse') {
-                                    if(addDangerBlock('bomb failed')) return;
-                                    finishChallenge(false, "炸弹爆炸！守护者血量 -1！", { dangerAlreadyHandled: true });
+                                    if(addDangerBlock('bomb failed', 4)) return;
+                                    finishChallenge(false, "炸弹爆炸！守护者血量 -4！", { dangerAlreadyHandled: true });
                                 } else {
                                     finishChallenge(false);
                                 }
@@ -3076,7 +3231,7 @@
                 challengeDurationMs = 10000;
                 state.challengeDeadline = Date.now() + challengeDurationMs; state.readingProgress = 0;
                 box.className = 'trap-mode';
-                document.getElementById('challenge-title').innerText = `拆弹模式：大声喊密码！失败血量 -1`;
+                document.getElementById('challenge-title').innerText = `拆弹模式：大声喊密码！失败血量 -4`;
                 document.getElementById('reading-bar-wrap').style.display = 'block'; document.getElementById('reading-fill').style.width = '0%';
                 document.getElementById('bomb-icon').innerHTML = renderVisualValue('effect-bomb');
                 document.getElementById('bomb-icon').style.display = 'block'; showBattleEffect(['effect-bomb', 'proj-lightning'], 900);
@@ -3147,11 +3302,11 @@
             
             if(!success) {
                 if(!options.dangerAlreadyHandled) {
-                    SFX.fail(); state.dangerLevel += 1; updateDangerUI();
+                    SFX.fail(); state.dangerLevel += 4; updateDangerUI();
                 }
                 state.consecutiveCorrect = 0;
                 updateComboUI();
-                msgEl.innerText = reasonMsg ? reasonMsg : "挑战失败！守护者血量 -1"; msgEl.style.color = "#ff4757";
+                msgEl.innerText = reasonMsg ? reasonMsg : "挑战失败！守护者血量 -4"; msgEl.style.color = "#ff4757";
                 setBattleBanner('挑战失败，怪潮逼近！', 'warning');
                 if(state.dangerLevel >= MAX_DANGER) { endGame(false); return; }
             } else {
